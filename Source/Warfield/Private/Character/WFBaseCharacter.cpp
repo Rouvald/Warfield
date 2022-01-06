@@ -2,33 +2,70 @@
 
 
 #include "Character/WFBaseCharacter.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
 
-// Sets default values
+DEFINE_LOG_CATEGORY_STATIC(LogWFBaseCharacter, All, All)
+
 AWFBaseCharacter::AWFBaseCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
 
+    CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+    CameraBoom->SetupAttachment(GetRootComponent());
+    CameraBoom->TargetArmLength = 400.0f;
+    CameraBoom->bUsePawnControlRotation = true;
+
+    FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+    FollowCamera->SetupAttachment(CameraBoom, CameraBoom->SocketName);
+    FollowCamera->bUsePawnControlRotation = false;
+
+    GetMesh()->SetRelativeLocation(FVector{0.0f, 0.0f, -88.0f});
+    GetMesh()->SetRelativeRotation(FRotator{0.0f, -90.0f, 0.0f});
 }
 
-// Called when the game starts or when spawned
 void AWFBaseCharacter::BeginPlay()
 {
-	Super::BeginPlay();
-	
+    Super::BeginPlay();
 }
 
-// Called every frame
 void AWFBaseCharacter::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
-
+    Super::Tick(DeltaTime);
 }
 
-// Called to bind functionality to input
 void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+    checkf(PlayerInputComponent, TEXT("PlayerInputComponent = nullptr"));
 
+    PlayerInputComponent->BindAxis("MoveForward", this, &AWFBaseCharacter::MoveForward);
+    PlayerInputComponent->BindAxis("MoveRight", this, &AWFBaseCharacter::MoveRight);
+    PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
+    PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+    PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+    PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 }
 
+void AWFBaseCharacter::MoveForward(const float Value)
+{
+    if (!Controller || FMath::IsNearlyZero(Value)) return;
+
+    const auto Rotation{Controller->GetControlRotation()};
+    const auto YawRotation{FRotator{0.0f, Rotation.Yaw, 0.0f}};
+
+    const auto Direction{FRotationMatrix{YawRotation}.GetUnitAxis(EAxis::X)};
+    AddMovementInput(Direction, Value);
+}
+
+void AWFBaseCharacter::MoveRight(const float Value)
+{
+    if (!Controller || FMath::IsNearlyZero(Value)) return;
+
+    const auto Rotation{Controller->GetControlRotation()};
+    const auto YawRotation{FRotator{0.0f, Rotation.Yaw, 0.0f}};
+
+    const auto Direction{FRotationMatrix{YawRotation}.GetUnitAxis(EAxis::Y)};
+    AddMovementInput(Direction, Value);
+}

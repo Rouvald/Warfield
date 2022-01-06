@@ -6,24 +6,35 @@
 #include "GameFramework/Character.h"
 #include "WFBaseCharacter.generated.h"
 
+class USpringArmComponent;
+class UCameraComponent;
+
 UCLASS()
 class WARFIELD_API AWFBaseCharacter : public ACharacter
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-	AWFBaseCharacter();
+    AWFBaseCharacter();
+
+    virtual void Tick(float DeltaTime) override;
+
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+    FORCEINLINE USpringArmComponent* GetCameraBoom() const {return CameraBoom;}
+    
+    FORCEINLINE UCameraComponent* GetFollowCamera() const {return FollowCamera;}
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+    void MoveForward(const float Value);
+    void MoveRight(const float Value);
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess = "true"))
+    USpringArmComponent* CameraBoom;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess = "true"))
+    UCameraComponent* FollowCamera;
 };
