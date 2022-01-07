@@ -8,6 +8,8 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UNiagaraSystem;
+class USoundCue;
 
 UCLASS()
 class WARFIELD_API AWFBaseCharacter : public ACharacter
@@ -21,15 +23,14 @@ public:
 
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-    FORCEINLINE USpringArmComponent* GetCameraBoom() const {return CameraBoom;}
-    
-    FORCEINLINE UCameraComponent* GetFollowCamera() const {return FollowCamera;}
+    FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+
+    FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 protected:
     virtual void BeginPlay() override;
 
-    void MoveForward(const float Value);
-    void MoveRight(const float Value);
+    void FireWeapon();
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess = "true"))
@@ -37,4 +38,20 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess = "true"))
     UCameraComponent* FollowCamera;
+
+    // VFX
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    FName WeaponMuzzFXleSocketName = "BarrelSocket";
+
+    /*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    UNiagaraSystem* MuzzleFX;*/
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    UParticleSystem* MuzzleFX;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    USoundCue* FireSound;
+
+    void MoveForward(const float Value);
+    void MoveRight(const float Value);
 };

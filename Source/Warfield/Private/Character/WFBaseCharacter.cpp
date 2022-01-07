@@ -4,6 +4,11 @@
 #include "Character/WFBaseCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Engine/SkeletalMeshSocket.h"
+#include "Sound/SoundCue.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseCharacter, All, All)
 
@@ -22,6 +27,17 @@ AWFBaseCharacter::AWFBaseCharacter()
 
     GetMesh()->SetRelativeLocation(FVector{0.0f, 0.0f, -88.0f});
     GetMesh()->SetRelativeRotation(FRotator{0.0f, -90.0f, 0.0f});
+
+    //
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationRoll = false;
+    bUseControllerRotationYaw = false;
+    //
+    GetCharacterMovement()->bOrientRotationToMovement = true;
+    GetCharacterMovement()->RotationRate = FRotator{0.0f, 540.0f, 0.0f};
+    GetCharacterMovement()->JumpZVelocity = 550.0f;
+    GetCharacterMovement()->AirControl = 0.2f;
+    //
 }
 
 void AWFBaseCharacter::BeginPlay()
@@ -46,6 +62,8 @@ void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+
+    PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AWFBaseCharacter::FireWeapon);
 }
 
 void AWFBaseCharacter::MoveForward(const float Value)
@@ -68,4 +86,27 @@ void AWFBaseCharacter::MoveRight(const float Value)
 
     const auto Direction{FRotationMatrix{YawRotation}.GetUnitAxis(EAxis::Y)};
     AddMovementInput(Direction, Value);
+}
+
+void AWFBaseCharacter::FireWeapon()
+{
+    /*UNiagaraFunctionLibrary::SpawnSystemAttached
+        (
+            MuzzleFX,                      //
+            GetMesh(),                     //
+            WeaponMuzzFXleSocketName,      //
+            FVector::ZeroVector,           //
+            FRotator::ZeroRotator,         //
+            EAttachLocation::SnapToTarget, //
+            false                          //
+            );*/
+
+    const auto BarrelSocket = GetMesh()->GetSocketByName(WeaponMuzzFXleSocketName);
+    if(BarrelSocket)
+    {
+        const auto SocketTransform = BarrelSocket->GetSocketTransform(GetMesh());
+        UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, SocketTransform);
+    }
+
+    UGameplayStatics::SpawnSoundAttached(FireSound, GetMesh(), WeaponMuzzFXleSocketName);
 }
