@@ -8,6 +8,7 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UAnimMontage;
 class UNiagaraSystem;
 class USoundCue;
 
@@ -39,19 +40,36 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess = "true"))
     UCameraComponent* FollowCamera;
 
-    // VFX
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
-    FName WeaponMuzzFXleSocketName = "BarrelSocket";
+    // Weapon
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
+    UAnimMontage* FireRecoilAnimMontage;
 
-    /*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
+    float TraceDistance = 20000.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
+    FName WeaponMuzzleFXSocketName = "BarrelSocket";
+
+    /*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     UNiagaraSystem* MuzzleFX;*/
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     UParticleSystem* MuzzleFX;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Sound", meta=(AllowPrivateAccess = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     USoundCue* FireSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
+    UParticleSystem* ImpactFX;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
+    UParticleSystem* TraceFX;
+    //
 
     void MoveForward(const float Value);
     void MoveRight(const float Value);
+
+    void MakeShot(FHitResult& HitResult, const FTransform& SocketTransform, FVector& TraceStart,
+        FVector& TraceEnd) const;
+    void SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd);
 };
