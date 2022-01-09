@@ -38,6 +38,9 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
     float LastMovementDirection{0.0f};
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
+    bool bIsAiming{false};
     
     void UpdateMovementDirection();
 };

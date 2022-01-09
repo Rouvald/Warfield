@@ -13,8 +13,7 @@ public class Warfield : ModuleRules
 			"Core", //
 			"CoreUObject", //
 			"Engine", //
-			"InputCore", //
-			"Niagara" //
+			"InputCore" //
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
@@ -22,7 +21,8 @@ public class Warfield : ModuleRules
 		PublicIncludePaths.AddRange(new string[]
 		{
 			"Warfield/Public/Character", //
-			"Warfield/Public/Character/Animation" //
+			"Warfield/Public/Character/Animation", //
+			"Warfield/Public/Components"
 		});
 
 		// Uncomment if you are using Slate UI

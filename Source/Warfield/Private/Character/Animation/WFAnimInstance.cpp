@@ -27,6 +27,8 @@ void UWFAnimInstance::UpdateAnimationProperties(float DeltaTime)
             : bIsAccelerating = false;
 
         UpdateMovementDirection();
+
+        bIsAiming = BaseCharacter->GetIsAiming();
     }
 }
 
