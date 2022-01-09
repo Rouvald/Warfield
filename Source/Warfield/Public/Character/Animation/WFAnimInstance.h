@@ -32,4 +32,12 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
     bool bIsAccelerating{false};
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
+    float MovementDirection{0.0f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
+    float LastMovementDirection{0.0f};
+    
+    void UpdateMovementDirection();
 };

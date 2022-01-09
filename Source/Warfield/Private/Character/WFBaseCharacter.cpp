@@ -8,7 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
-#include "Engine/SkeletalMeshSocket.h"
+#include "Components/CapsuleComponent.h"
 #include "Sound/SoundCue.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseCharacter, All, All)
@@ -16,6 +16,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogWFBaseCharacter, All, All)
 AWFBaseCharacter::AWFBaseCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
+
+    GetCapsuleComponent()->SetCapsuleSize(42.0f, 95.0f);
 
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(GetRootComponent());
@@ -27,7 +29,7 @@ AWFBaseCharacter::AWFBaseCharacter()
     FollowCamera->SetupAttachment(CameraBoom, CameraBoom->SocketName);
     FollowCamera->bUsePawnControlRotation = false;
 
-    GetMesh()->SetRelativeLocation(FVector{0.0f, 0.0f, -88.0f});
+    GetMesh()->SetRelativeLocation(FVector{0.0f, 0.0f, -97.0f});
     GetMesh()->SetRelativeRotation(FRotator{0.0f, -90.0f, 0.0f});
 
     //
@@ -92,73 +94,113 @@ void AWFBaseCharacter::MoveRight(const float Value)
 
 void AWFBaseCharacter::FireWeapon()
 {
-    /*UNiagaraFunctionLibrary::SpawnSystemAttached
-        (
-            MuzzleFX,                      //
-            GetMesh(),                     //
-            WeaponMuzzleFXSocketName,      //
-            FVector::ZeroVector,           //
-            FRotator::ZeroRotator,         //
-            EAttachLocation::SnapToTarget, //
-            false                          //
-            );*/
+    InitFX();
+    MakeShot();
+}
 
-    const auto BarrelSocket = GetMesh()->GetSocketByName(WeaponMuzzleFXSocketName);
-    if (BarrelSocket)
+void AWFBaseCharacter::MakeShot()
+{
+    if (!GetWorld()) return;
+
+    FVector TraceStart, TraceEnd;
+    if (!GetTraceData(TraceStart, TraceEnd)) return;
+
+    //
+    FVector TraceFXEnd{TraceEnd};
+    //
+    // Hit from ViewPoint
+    FHitResult HitResult;
+    MakeHit(HitResult, TraceStart, TraceEnd, TraceFXEnd);
+
+    // Hit from WeaponMuzzleSocket
+    FHitResult WeaponHitResult;
+    FVector WeaponTraceStart{GetSocketLocation()}, WeaponTraceEnd{TraceFXEnd};
+    MakeWeaponHit(WeaponHitResult, WeaponTraceStart, WeaponTraceEnd, TraceFXEnd);
+
+    // Spawn FX
+    SpawnImpactFX(TraceFXEnd);
+    SpawnTraceFX(GetSocketLocation(), TraceFXEnd);
+
+    // Play recoil animation
+    PlayFireRecoilAnimMon();
+}
+
+bool AWFBaseCharacter::GetTraceData(FVector& TraceStart, FVector& TraceEnd) const
+{
+    FVector ViewLocation;
+    FRotator ViewRotation;
+
+    if (!Controller) return false;
+
+    Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+    TraceStart = ViewLocation;
+    const auto ShootDirection = ViewRotation.Vector();
+    TraceEnd = TraceStart + ShootDirection * TraceDistance;
+    return true;
+}
+
+void AWFBaseCharacter::MakeHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd)
+{
+    if (!GetWorld()) return;
+
+    GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
+    if (HitResult.bBlockingHit)
     {
-        const auto SocketTransform = BarrelSocket->GetSocketTransform(GetMesh());
-        UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, SocketTransform);
-
-        FHitResult HitResult;
-        FVector TraceStart, TraceEnd;
-        MakeShot(HitResult, SocketTransform, TraceStart, TraceEnd);
-
-        FVector TraceFXEnd{TraceEnd};
-
-        if (HitResult.bBlockingHit)
-        {
-            TraceFXEnd = HitResult.ImpactPoint;
-            /*DrawDebugLine(GetWorld(), TraceStart, HitResult.ImpactPoint, FColor::Red, false, 2.0f);
-            DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 15.0f, FColor::Green, false, 2.0f);*/
-            UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactFX, HitResult.ImpactPoint);
-            /*}
-            else
-            {
-                DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 2.0f);
-            }*/
-        }
-        
-        SpawnTraceFX(TraceStart, TraceFXEnd);
-        
-        UGameplayStatics::SpawnSoundAtLocation(GetWorld(), FireSound,
-            GetMesh()->GetSocketLocation(WeaponMuzzleFXSocketName));
-
-        const auto AnimInstance = GetMesh()->GetAnimInstance();
-        if (AnimInstance && FireRecoilAnimMontage)
-        {
-            AnimInstance->Montage_Play(FireRecoilAnimMontage);
-            AnimInstance->Montage_JumpToSection(FName("StartFire")); // Name of Section in AnimMontage
-        }
+        TraceFXEnd = HitResult.ImpactPoint;
+        bIsHit = true;
     }
 }
 
-void AWFBaseCharacter::MakeShot(FHitResult& HitResult, const FTransform& SocketTransform, FVector& TraceStart,
-    FVector& TraceEnd) const
+void AWFBaseCharacter::MakeWeaponHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd)
 {
-    const auto Rotation{SocketTransform.GetRotation()};
-    const auto RotationAxisX{Rotation.GetAxisX()};
-
-    TraceStart = SocketTransform.GetLocation();
-    TraceEnd = TraceStart + RotationAxisX * TraceDistance;
+    if (!GetWorld()) return;
 
     GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
+    if (HitResult.bBlockingHit)
+    {
+        TraceFXEnd = HitResult.ImpactPoint;
+        bIsHit = true;
+    }
 }
 
-void AWFBaseCharacter::SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd)
+void AWFBaseCharacter::PlayFireRecoilAnimMon() const
 {
+    const auto AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && FireRecoilAnimMontage)
+    {
+        AnimInstance->Montage_Play(FireRecoilAnimMontage);
+        AnimInstance->Montage_JumpToSection(FName("StartFire")); // Name of Section in AnimMontage
+    }
+}
+
+void AWFBaseCharacter::InitFX() const
+{
+    // Muzzle FX
+    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetSocketLocation());
+
+    // Sound
+    UGameplayStatics::SpawnSoundAtLocation(GetWorld(), FireSound, GetSocketLocation());
+}
+
+void AWFBaseCharacter::SpawnImpactFX(const FVector& TraceFXEnd) const
+{
+    bIsHit
+        ? UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactFX, TraceFXEnd)
+        : UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), NoHitImpactFX, TraceFXEnd);
+}
+
+void AWFBaseCharacter::SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd) const
+{
+    // Trace FX
     const auto TraceFXComponent = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TraceFX, TraceFXStart);
     if (TraceFXComponent)
     {
         TraceFXComponent->SetVectorParameter(FName("Target"), TraceFXEnd);
     }
+}
+
+FVector AWFBaseCharacter::GetSocketLocation() const
+{
+    return GetMesh()->GetSocketLocation(WeaponMuzzleFXSocketName);
 }

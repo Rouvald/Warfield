@@ -63,13 +63,29 @@ private:
     UParticleSystem* ImpactFX;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
+    UParticleSystem* NoHitImpactFX;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     UParticleSystem* TraceFX;
     //
+
+    bool bIsHit = false;
 
     void MoveForward(const float Value);
     void MoveRight(const float Value);
 
-    void MakeShot(FHitResult& HitResult, const FTransform& SocketTransform, FVector& TraceStart,
-        FVector& TraceEnd) const;
-    void SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd);
+    void MakeShot();
+
+    bool GetTraceData(FVector& TraceStart, FVector& TraceEnd) const;
+
+    void MakeHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd);
+    void MakeWeaponHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd);
+
+    void PlayFireRecoilAnimMon() const;
+
+    void InitFX() const;
+    void SpawnImpactFX(const FVector& TraceFXEnd) const;
+    void SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd) const;
+
+    FVector GetSocketLocation() const;
 };
