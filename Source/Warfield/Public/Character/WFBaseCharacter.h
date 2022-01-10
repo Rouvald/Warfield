@@ -36,8 +36,6 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    void FireWeapon();
-
 private:
     // Components
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess = "true"))
@@ -50,9 +48,19 @@ private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
     UAnimMontage* FireRecoilAnimMontage;
 
+    /* Weapon Shooting*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
     float TraceDistance = 20000.0f;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
+    float ShootTimeRate = 0.1;
+
+    FTimerHandle ShootTimerHandle;
+
+    bool bIsButtonFirePressed{false};
+    bool bCanFire{true};
+
+    /* Weapon VFX*/
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     FName WeaponMuzzleFXSocketName = "BarrelSocket";
 
@@ -70,7 +78,7 @@ private:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     UParticleSystem* TraceFX;
-    //
+    //  
 
     // Zoom
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Zoom", meta=(AllowPrivateAccess = "true"))
@@ -103,26 +111,26 @@ private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CrossHair", meta=(AllowPrivateAccess = "true"))
     FVector2D CrossHairSpreadRange{0.75f, 2.0f};
 
-    /* Velocity*/
+    /* CrossHair Velocity*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CrossHair",
         meta=(AllowPrivateAccess = "true", ClampMin="0.0", ClampMax="1.0", UIMin="0.0", UIMax="1.0"))
     float CrossHairVelocitySpread{0.5f};
 
-    /* In Air*/
+    /* CrossHair In Air*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CrossHair",
         meta=(AllowPrivateAccess = "true", ClampMin="0.0", ClampMax="1.0", UIMin="0.0", UIMax="1.0"))
     float CrossHairInAirSpread{0.5f};
 
     float EditCrossHairAimSpread{0.0f};
 
-    /* Aiming*/
+    /* CrossHair Aiming*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="CrossHair",
         meta=(AllowPrivateAccess = "true", ClampMin="0.0", ClampMax="1.0", UIMin="0.0", UIMax="1.0"))
     float CrossHairAimSpread{0.5f};
 
     float EditCrossHairInAirSpread{0.0f};
 
-    /* Shooting*/
+    /* CrossHair Shooting*/
     FTimerHandle CrossHairShootTimerHandle;
     bool bIsShootingBullet{false};
     float ShootingTimeDuration{0.5f};
@@ -142,6 +150,11 @@ private:
     virtual void AddControllerYawInput(float Val) override;
     virtual void AddControllerPitchInput(float Val) override;
     float GetCurrentMouseSensitivity(const float DefaultMouseSenseVal) const;
+
+    void StartFire();
+    void StartFireTimer();
+    void ResetFireTimer();
+    void StopFire();
 
     void MakeShot();
 
@@ -167,7 +180,7 @@ private:
         const float InterpSpeedEnable = 30.0f, const float InterpSpeedNOTEnable = 30.0f);
 
     void StartCrossHairShoot();
-    
+
     UFUNCTION()
     void StopCrossHairShoot();
 };

@@ -80,7 +80,8 @@ void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
     PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-    PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AWFBaseCharacter::FireWeapon);
+    PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AWFBaseCharacter::StartFire);
+    PlayerInputComponent->BindAction("Fire", IE_Released, this, &AWFBaseCharacter::StopFire);
 
     DECLARE_DELEGATE_OneParam(FOnZoomSignature, bool);
     PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Pressed, this, &AWFBaseCharacter::Zoom, true);
@@ -128,10 +129,32 @@ float AWFBaseCharacter::GetCurrentMouseSensitivity(const float DefaultMouseSense
     return DefaultMouseSenseVal * DefaultMouseSensitivity;
 }
 
-void AWFBaseCharacter::FireWeapon()
+void AWFBaseCharacter::StartFire()
 {
-    InitFX();
+    bIsButtonFirePressed = true;
+    StartFireTimer();
+}
+
+void AWFBaseCharacter::StartFireTimer()
+{
+    if(!bCanFire) return;
+    
+    bCanFire = false;
+    GetWorldTimerManager().SetTimer(ShootTimerHandle, this, &AWFBaseCharacter::ResetFireTimer, ShootTimeRate);
     MakeShot();
+}
+void AWFBaseCharacter::ResetFireTimer()
+{
+    bCanFire = true;
+    if(bIsButtonFirePressed)
+    {
+        StartFireTimer();
+    }
+}
+
+void AWFBaseCharacter::StopFire()
+{
+    bIsButtonFirePressed = false;
 }
 
 void AWFBaseCharacter::MakeShot()
@@ -141,7 +164,9 @@ void AWFBaseCharacter::MakeShot()
     FVector TraceStart, TraceEnd;
     if (!GetTraceData(TraceStart, TraceEnd)) return;
 
-    //
+    InitFX();
+
+    // Bullet Trace End FVector
     FVector TraceFXEnd{TraceEnd};
     //
     // Hit from ViewPoint
