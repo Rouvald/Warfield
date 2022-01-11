@@ -5,6 +5,7 @@
 #include "WFBaseCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Components/WFCrossHairComponent.h"
 
 //DEFINE_LOG_CATEGORY_STATIC(LogWFAnimInstance, All, All);
 
@@ -28,7 +29,11 @@ void UWFAnimInstance::UpdateAnimationProperties(float DeltaTime)
 
         UpdateMovementDirection();
 
-        bIsAiming = BaseCharacter->GetIsAiming();
+        const auto CrossHairComponent = BaseCharacter->FindComponentByClass<UWFCrossHairComponent>();
+        if (CrossHairComponent)
+        {
+            bIsAiming = CrossHairComponent->GetIsAiming();
+        }
     }
 }
 
@@ -39,12 +44,12 @@ void UWFAnimInstance::NativeInitializeAnimation()
 
 void UWFAnimInstance::UpdateMovementDirection()
 {
-    const FRotator AimRotation {BaseCharacter->GetBaseAimRotation()};
-    const FRotator MovementRotation {UKismetMathLibrary::MakeRotFromX(BaseCharacter->GetVelocity())};
-    
+    const FRotator AimRotation{BaseCharacter->GetBaseAimRotation()};
+    const FRotator MovementRotation{UKismetMathLibrary::MakeRotFromX(BaseCharacter->GetVelocity())};
+
     MovementDirection = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, AimRotation).Yaw;
 
-    if(BaseCharacter->GetVelocity().Size() > 0.0f)
+    if (BaseCharacter->GetVelocity().Size() > 0.0f)
     {
         LastMovementDirection = MovementDirection;
     }

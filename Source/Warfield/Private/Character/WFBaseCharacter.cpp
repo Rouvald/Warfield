@@ -5,6 +5,7 @@
 #include "DrawDebugHelpers.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/WFCrossHairComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -12,8 +13,6 @@
 #include "Sound/SoundCue.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseCharacter, All, All)
-
-constexpr static float DeltaTimeMultiplier = 4.0f;
 
 AWFBaseCharacter::AWFBaseCharacter()
 {
@@ -44,6 +43,8 @@ AWFBaseCharacter::AWFBaseCharacter()
     GetCharacterMovement()->JumpZVelocity = 550.0f;
     GetCharacterMovement()->AirControl = 0.2f;
     //
+
+    CrossHairComponent = CreateDefaultSubobject<UWFCrossHairComponent>(TEXT("CrossHairComponent"));
 }
 
 void AWFBaseCharacter::BeginPlay()
@@ -51,26 +52,18 @@ void AWFBaseCharacter::BeginPlay()
     Super::BeginPlay();
 
     checkf(GetCharacterMovement(), TEXT("CharacterMovementComponent = nullptr"));
-
-    if (FollowCamera)
-    {
-        DefaultAngleFOV = GetFollowCamera()->FieldOfView;
-        CurrentAngleFOV = GetFollowCamera()->FieldOfView;
-    }
 }
 
 void AWFBaseCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-
-    UpdateZoomInterp(DeltaTime);
-    UpdateCrossHairSpread(DeltaTime);
 }
 
 void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
     checkf(PlayerInputComponent, TEXT("PlayerInputComponent = nullptr"));
+    checkf(CrossHairComponent, TEXT("CrossHairComponent = nullptr"));
 
     PlayerInputComponent->BindAxis("MoveForward", this, &AWFBaseCharacter::MoveForward);
     PlayerInputComponent->BindAxis("MoveRight", this, &AWFBaseCharacter::MoveRight);
@@ -84,8 +77,8 @@ void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     PlayerInputComponent->BindAction("Fire", IE_Released, this, &AWFBaseCharacter::StopFire);
 
     DECLARE_DELEGATE_OneParam(FOnZoomSignature, bool);
-    PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Pressed, this, &AWFBaseCharacter::Zoom, true);
-    PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Released, this, &AWFBaseCharacter::Zoom, false);
+    PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Pressed, CrossHairComponent, &UWFCrossHairComponent::Zoom, true);
+    PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Released, CrossHairComponent, &UWFCrossHairComponent::Zoom, false);
 }
 
 void AWFBaseCharacter::MoveForward(const float Value)
@@ -112,21 +105,12 @@ void AWFBaseCharacter::MoveRight(const float Value)
 
 void AWFBaseCharacter::AddControllerYawInput(float Val)
 {
-    Super::AddControllerYawInput(GetCurrentMouseSensitivity(Val));
+    Super::AddControllerYawInput(CrossHairComponent->GetCurrentMouseSensitivity(Val));
 }
 
 void AWFBaseCharacter::AddControllerPitchInput(float Val)
 {
-    Super::AddControllerPitchInput(GetCurrentMouseSensitivity(Val));
-}
-
-float AWFBaseCharacter::GetCurrentMouseSensitivity(const float DefaultMouseSenseVal) const
-{
-    if (bIsAiming)
-    {
-        return ZoomMouseSensitivity * DefaultMouseSenseVal;
-    }
-    return DefaultMouseSenseVal * DefaultMouseSensitivity;
+    Super::AddControllerPitchInput(CrossHairComponent->GetCurrentMouseSensitivity(Val));
 }
 
 void AWFBaseCharacter::StartFire()
@@ -137,16 +121,17 @@ void AWFBaseCharacter::StartFire()
 
 void AWFBaseCharacter::StartFireTimer()
 {
-    if(!bCanFire) return;
-    
+    if (!bCanFire) return;
+
     bCanFire = false;
     GetWorldTimerManager().SetTimer(ShootTimerHandle, this, &AWFBaseCharacter::ResetFireTimer, ShootTimeRate);
     MakeShot();
 }
+
 void AWFBaseCharacter::ResetFireTimer()
 {
     bCanFire = true;
-    if(bIsButtonFirePressed)
+    if (bIsButtonFirePressed)
     {
         StartFireTimer();
     }
@@ -186,7 +171,7 @@ void AWFBaseCharacter::MakeShot()
     PlayFireRecoilAnimMon();
 
     // Shoot CrossHair Spread
-    StartCrossHairShoot();
+    CrossHairComponent->StartCrossHairShoot();
 }
 
 bool AWFBaseCharacter::GetTraceData(FVector& TraceStart, FVector& TraceEnd) const
@@ -267,90 +252,4 @@ void AWFBaseCharacter::SpawnTraceFX(const FVector& TraceFXStart, const FVector& 
 FVector AWFBaseCharacter::GetSocketLocation() const
 {
     return GetMesh()->GetSocketLocation(WeaponMuzzleFXSocketName);
-}
-
-void AWFBaseCharacter::Zoom(const bool bEnable)
-{
-    bIsAiming = bEnable;
-    /*const auto PlayerController = Cast<APlayerController>(GetController());
-    if (!PlayerController || !PlayerController->PlayerCameraManager) return;
-
-    if (bEnable)
-    {
-        DefaultAngleFOV = PlayerController->PlayerCameraManager->GetFOVAngle();
-    }
-    PlayerController->PlayerCameraManager->SetFOV(bEnable ? ZoomAngleFOV : DefaultAngleFOV);*/
-}
-
-void AWFBaseCharacter::UpdateZoomInterp(const float DeltaTime)
-{
-    if (bIsAiming)
-    {
-        CurrentAngleFOV = FMath::FInterpTo(CurrentAngleFOV, ZoomAngleFOV, DeltaTime, ZoomInterpSpeed);
-    }
-    else
-    {
-        CurrentAngleFOV = FMath::FInterpTo(CurrentAngleFOV, DefaultAngleFOV, DeltaTime, ZoomInterpSpeed);
-    }
-    GetFollowCamera()->SetFieldOfView(CurrentAngleFOV);
-}
-
-void AWFBaseCharacter::UpdateCrossHairSpread(const float DeltaTime)
-{
-    // Velocity Spread
-    const auto EditCrossHairVelocitySpread{UpdateCrossHairVelocitySpread()};
-
-    // In air Spread
-    UpdateInterpCrossHairSpread(GetCharacterMovement()->IsFalling(), EditCrossHairInAirSpread, CrossHairInAirSpread, DeltaTime, 1.0f);
-
-    // Aim Spread
-    UpdateInterpCrossHairSpread(bIsAiming, EditCrossHairAimSpread, CrossHairAimSpread, DeltaTime);
-
-    // Shoot Spread
-    UpdateInterpCrossHairSpread(bIsShootingBullet, EditCrossHairShootingSpread, CrossHairShootingSpread, DeltaTime, 60.0f, 60.0f);
-
-    // Total Current Spread
-    CurrentCrossHairSpread = FMath::Clamp
-        (
-            DefaultCrossHairSpread + EditCrossHairVelocitySpread + EditCrossHairInAirSpread - EditCrossHairAimSpread +
-            EditCrossHairShootingSpread, //
-            //
-            CrossHairSpreadRange.X, //
-            CrossHairSpreadRange.Y  //
-            );
-    //
-}
-
-float AWFBaseCharacter::UpdateCrossHairVelocitySpread() const
-{
-    const FVector2D Velocity2D{0.0f, GetCharacterMovement()->GetMaxSpeed()};
-    const FVector2D Spread2D{0.0f, CrossHairVelocitySpread};
-    FVector Velocity = GetVelocity();
-    Velocity.Z = 0.0f;
-
-    return FMath::GetMappedRangeValueClamped(Velocity2D, Spread2D, Velocity.Size());
-}
-
-void AWFBaseCharacter::UpdateInterpCrossHairSpread(const bool bIsEnable, float& EditCrossHairSpread, const float CrossHairSpread,
-    const float DeltaTime, const float InterpSpeedEnable, const float InterpSpeedNOTEnable)
-{
-    if (bIsEnable)
-    {
-        EditCrossHairSpread = FMath::FInterpTo(EditCrossHairSpread, CrossHairSpread, DeltaTime, InterpSpeedEnable);
-    }
-    else
-    {
-        EditCrossHairSpread = FMath::FInterpTo(EditCrossHairSpread, 0.0f, DeltaTime, InterpSpeedNOTEnable);
-    }
-}
-
-void AWFBaseCharacter::StartCrossHairShoot()
-{
-    bIsShootingBullet = true;
-    GetWorldTimerManager().SetTimer(CrossHairShootTimerHandle, this, &AWFBaseCharacter::StopCrossHairShoot, ShootingTimeDuration, false);
-}
-
-void AWFBaseCharacter::StopCrossHairShoot()
-{
-    bIsShootingBullet = false;
 }
