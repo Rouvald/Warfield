@@ -22,7 +22,8 @@ public class Warfield : ModuleRules
 		{
 			"Warfield/Public/Character", //
 			"Warfield/Public/Character/Animation", //
-			"Warfield/Public/Components"
+			"Warfield/Public/Components",
+			"Warfield/Public/Items"
 		});
 
 		// Uncomment if you are using Slate UI
