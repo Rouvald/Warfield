@@ -7,19 +7,20 @@
 #include "WFBaseItem.generated.h"
 
 class UBoxComponent;
+class UWidgetComponent;
 
 UCLASS()
 class WARFIELD_API AWFBaseItem : public AActor
 {
-	GENERATED_BODY()
-	
-public:	
-	AWFBaseItem();
+    GENERATED_BODY()
+
+public:
+    AWFBaseItem();
 
     virtual void Tick(float DeltaTime) override;
 
 protected:
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
 private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
@@ -28,4 +29,6 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
     UBoxComponent* BoxCollision;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+    UWidgetComponent* ItemInfoWidget;
 };
