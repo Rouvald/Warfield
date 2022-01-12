@@ -5,12 +5,16 @@
 #include "DrawDebugHelpers.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
-#include "Components/WFCrossHairComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Sound/SoundCue.h"
+#include "Components/WidgetComponent.h"
+
+#include "Components/WFCrossHairComponent.h"
+#include "WFBaseItem.h"
+
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseCharacter, All, All)
 
@@ -22,9 +26,9 @@ AWFBaseCharacter::AWFBaseCharacter()
 
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(GetRootComponent());
-    CameraBoom->TargetArmLength = 400.0f;
+    CameraBoom->TargetArmLength = 500.0f;
     CameraBoom->bUsePawnControlRotation = true;
-    CameraBoom->SocketOffset = FVector{0.0f, 110.0f, 120.0f};
+    CameraBoom->SocketOffset = FVector{0.0f, 110.0f, 140.0f};
 
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, CameraBoom->SocketName);
@@ -52,6 +56,8 @@ void AWFBaseCharacter::BeginPlay()
     Super::BeginPlay();
 
     checkf(GetCharacterMovement(), TEXT("CharacterMovementComponent = nullptr"));
+
+    OnItemAreaOverlap.AddUObject(this, &AWFBaseCharacter::ItemInfoVisibilityTimer);
 }
 
 void AWFBaseCharacter::Tick(float DeltaTime)
@@ -113,6 +119,9 @@ void AWFBaseCharacter::AddControllerPitchInput(float Val)
     Super::AddControllerPitchInput(CrossHairComponent->GetCurrentMouseSensitivity(Val));
 }
 
+/*
+ *  TODO: Remove all Shooting logic into WeaponComponent and BaseWeapon
+ */
 void AWFBaseCharacter::StartFire()
 {
     bIsButtonFirePressed = true;
@@ -147,7 +156,7 @@ void AWFBaseCharacter::MakeShot()
     if (!GetWorld()) return;
 
     FVector TraceStart, TraceEnd;
-    if (!GetTraceData(TraceStart, TraceEnd)) return;
+    if (!GetTraceData(TraceStart, TraceEnd, ShootTraceDistance)) return;
 
     InitFX();
 
@@ -155,17 +164,38 @@ void AWFBaseCharacter::MakeShot()
     FVector TraceFXEnd{TraceEnd};
     //
     // Hit from ViewPoint
-    FHitResult HitResult;
-    MakeHit(HitResult, TraceStart, TraceEnd, TraceFXEnd);
+    FHitResult DefaultHitResult;
+    MakeHit(DefaultHitResult, TraceStart, TraceEnd, TraceFXEnd);
 
     // Hit from WeaponMuzzleSocket
     FHitResult WeaponHitResult;
-    FVector WeaponTraceStart{GetSocketLocation()}, WeaponTraceEnd{TraceFXEnd};
-    MakeWeaponHit(WeaponHitResult, WeaponTraceStart, WeaponTraceEnd, TraceFXEnd);
+    FVector WeaponTraceStart{GetSocketLocation()};
+    /*
+     * @note: Sometimes Trace can't reach DefaultHitResult.ImpactPoint
+     *        This 2 lines fix this error
+     */
+    const FVector StartToEndTraces{TraceFXEnd - GetSocketLocation()};
+    FVector WeaponTraceEnd{GetSocketLocation() + StartToEndTraces * 1.1f};
+    //
+    /* MakeHit for second trace, from weapon muzzle socket */
+    MakeHit(WeaponHitResult, WeaponTraceStart, WeaponTraceEnd, TraceFXEnd);
+
+    //DrawDebugSphere(GetWorld(), WeaponHitResult.ImpactPoint, 10.0f, 16, FColor::Green, false, 10.0f);
+
+    /*
+     * @note We have 2 FHitResult: DefaultHitResult and WeaponHitResult.
+     *       It's needed for correct build trace from WeaponMuzzle and HitPoint (if have HitPoint).
+     *       For Correct working FX we need use WeaponHitResult. Because If DefaultHitResult hit someone,
+     *       WeaponHitResult anyways hit same Object and will have same ImpactPoint.
+     *
+     *       Another situation:  Nothing had been hit 
+     *       In this case for spawning FX will be used TraceFXEnd.
+     */
 
     // Spawn FX
-    SpawnImpactFX(TraceFXEnd);
+    SpawnImpactFX(WeaponHitResult, TraceFXEnd);
     SpawnTraceFX(GetSocketLocation(), TraceFXEnd);
+    //
 
     // Play recoil animation
     PlayFireRecoilAnimMon();
@@ -174,7 +204,7 @@ void AWFBaseCharacter::MakeShot()
     CrossHairComponent->StartCrossHairShoot();
 }
 
-bool AWFBaseCharacter::GetTraceData(FVector& TraceStart, FVector& TraceEnd) const
+bool AWFBaseCharacter::GetTraceData(FVector& TraceStart, FVector& TraceEnd, const float TraceDistance) const
 {
     FVector ViewLocation;
     FRotator ViewRotation;
@@ -194,22 +224,15 @@ void AWFBaseCharacter::MakeHit(FHitResult& HitResult, const FVector& TraceStart,
     if (!GetWorld()) return;
 
     GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
+    //DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 10.0f);
     if (HitResult.bBlockingHit)
     {
         TraceFXEnd = HitResult.ImpactPoint;
         bIsHit = true;
     }
-}
-
-void AWFBaseCharacter::MakeWeaponHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd)
-{
-    if (!GetWorld()) return;
-
-    GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
-    if (HitResult.bBlockingHit)
+    else
     {
-        TraceFXEnd = HitResult.ImpactPoint;
-        bIsHit = true;
+        bIsHit = false;
     }
 }
 
@@ -226,16 +249,28 @@ void AWFBaseCharacter::PlayFireRecoilAnimMon() const
 void AWFBaseCharacter::InitFX() const
 {
     // Muzzle FX
-    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetSocketLocation());
+    /* TODO: In future remade with SpawnAtLocation*/
+    UGameplayStatics::SpawnEmitterAttached
+        (
+            MuzzleFX,                      //
+            GetMesh(),                     //
+            WeaponMuzzleFXSocketName,      //
+            FVector::ZeroVector,           //
+            FRotator::ZeroRotator,         //
+            EAttachLocation::SnapToTarget, //
+            true                           //
+            );
+    //UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetSocketLocation());
 
     // Sound
     UGameplayStatics::SpawnSoundAtLocation(GetWorld(), FireSound, GetSocketLocation());
 }
 
-void AWFBaseCharacter::SpawnImpactFX(const FVector& TraceFXEnd) const
+void AWFBaseCharacter::SpawnImpactFX(const FHitResult& HitResult, const FVector& TraceFXEnd) const
 {
+    // Impact FX
     bIsHit
-        ? UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactFX, TraceFXEnd)
+        ? UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactFX, HitResult.ImpactPoint, HitResult.Normal.Rotation())
         : UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), NoHitImpactFX, TraceFXEnd);
 }
 
@@ -252,4 +287,73 @@ void AWFBaseCharacter::SpawnTraceFX(const FVector& TraceFXStart, const FVector& 
 FVector AWFBaseCharacter::GetSocketLocation() const
 {
     return GetMesh()->GetSocketLocation(WeaponMuzzleFXSocketName);
+}
+
+void AWFBaseCharacter::ItemInfoVisibilityTimer(const AWFBaseItem* Item, bool bIsOverlap)
+{
+    const FTimerDelegate ItemTimerDelegate = FTimerDelegate::CreateUObject(this, &AWFBaseCharacter::UpdateItemInfoVisibility);
+    if (bIsOverlap)
+    {
+        GetWorldTimerManager().SetTimer(ItemInfoVisibilityTimerHandle, ItemTimerDelegate, 0.1f, true);
+        HittedItems.Add(Item);
+    }
+    else
+    {
+        HittedItems.RemoveSingle(Item);
+        if (HittedItems.Num() == 0)
+        {
+            GetWorldTimerManager().ClearTimer(ItemInfoVisibilityTimerHandle);
+        }
+    }
+    //UE_LOG(LogWFBaseCharacter, Warning, TEXT("HittedItems: %d"), HittedItems.Num());
+}
+
+void AWFBaseCharacter::UpdateItemInfoVisibility()
+{
+    FHitResult HitItemResult;
+
+    if (!MakeHitItemVisibility(HitItemResult)) return;
+
+    const auto HitItem = Cast<AWFBaseItem>(HitItemResult.GetActor());
+    if (!HitItem)
+    {
+        HideAllHittedItems();
+        return;
+    }
+
+    const auto bIsContains = HittedItems.Contains(HitItem);
+
+    const auto ItemInfo = HitItem->FindComponentByClass<UWidgetComponent>();
+    if (ItemInfo)
+    {
+        bIsContains ? ItemInfo->SetVisibility(true) : ItemInfo->SetVisibility(false);
+    }
+}
+
+bool AWFBaseCharacter::MakeHitItemVisibility(FHitResult& HitResult)
+{
+    if (!GetWorld()) return false;
+
+    FVector TraceStart, TraceEnd;
+    if (!GetTraceData(TraceStart, TraceEnd, ItemVisibilityTraceDistance)) return false;
+
+    FCollisionQueryParams CollisionQueryParams;
+    CollisionQueryParams.AddIgnoredActor(this);
+
+    GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility, CollisionQueryParams);
+    //DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 1.0f);
+
+    return HitResult.bBlockingHit;
+}
+
+void AWFBaseCharacter::HideAllHittedItems() const
+{
+    for (const auto HittedItem : HittedItems)
+    {
+        const auto ItemInfo = HittedItem->FindComponentByClass<UWidgetComponent>();
+        if (ItemInfo)
+        {
+            ItemInfo->SetVisibility(false);
+        }
+    }
 }

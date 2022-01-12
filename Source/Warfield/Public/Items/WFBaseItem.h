@@ -1,4 +1,4 @@
-// Warfield Game. All Rigths Reserved
+// Warfield Game. All Rights Reserved
 
 #pragma once
 
@@ -7,6 +7,7 @@
 #include "WFBaseItem.generated.h"
 
 class UBoxComponent;
+class USphereComponent;
 class UWidgetComponent;
 
 UCLASS()
@@ -29,6 +30,17 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
     UBoxComponent* BoxCollision;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+    USphereComponent* AreaComponent;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
     UWidgetComponent* ItemInfoWidget;
+
+    UFUNCTION()
+    void OnAreaBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+        int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+    UFUNCTION()
+    void OnAreaEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+        int32 OtherBodyIndex);
 };

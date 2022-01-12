@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "WFCoreTypes.h"
 #include "WFBaseCharacter.generated.h"
 
 class USpringArmComponent;
@@ -12,6 +13,7 @@ class UWFCrossHairComponent;
 class UAnimMontage;
 class UNiagaraSystem;
 class USoundCue;
+class AWFBaseItem;
 
 UCLASS()
 class WARFIELD_API AWFBaseCharacter : public ACharacter
@@ -19,6 +21,8 @@ class WARFIELD_API AWFBaseCharacter : public ACharacter
     GENERATED_BODY()
 
 public:
+    FOnItemAreaOverlapSignature OnItemAreaOverlap;
+    
     AWFBaseCharacter();
 
     virtual void Tick(float DeltaTime) override;
@@ -51,7 +55,7 @@ private:
 
     /* Weapon Shooting*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
-    float TraceDistance = 20000.0f;
+    float ShootTraceDistance = 20000.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
     float ShootTimeRate = 0.6;
@@ -63,7 +67,7 @@ private:
 
     /* Weapon VFX*/
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
-    FName WeaponMuzzleFXSocketName = "BarrelSocket";
+    FName WeaponMuzzleFXSocketName = "MuzzleSocket";
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     UParticleSystem* MuzzleFX;
@@ -79,7 +83,20 @@ private:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon VFX", meta=(AllowPrivateAccess = "true"))
     UParticleSystem* TraceFX;
-    //  
+    //
+
+    /* Interaction with Items*/
+    FTimerHandle ItemInfoVisibilityTimerHandle;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess = "true"))
+    float ItemVisibilityTraceDistance = 5000.0f;
+    //
+
+    /* Item is overlap*/
+    //int8 ItemOverlapCounter{0};
+    UPROPERTY()
+    TArray<const AWFBaseItem*> HittedItems;
+    //
 
     bool bIsHit = false;
 
@@ -96,16 +113,21 @@ private:
 
     void MakeShot();
 
-    bool GetTraceData(FVector& TraceStart, FVector& TraceEnd) const;
+    bool GetTraceData(FVector& TraceStart, FVector& TraceEnd, const float TraceDistance) const;
 
     void MakeHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd);
-    void MakeWeaponHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd);
 
     void PlayFireRecoilAnimMon() const;
 
     void InitFX() const;
-    void SpawnImpactFX(const FVector& TraceFXEnd) const;
+    void SpawnImpactFX(const FHitResult& HitResult, const FVector& TraceFXEnd) const;
     void SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd) const;
 
     FVector GetSocketLocation() const;
+
+    void ItemInfoVisibilityTimer(const AWFBaseItem* Item, bool bIsOverlap);
+    void UpdateItemInfoVisibility();
+    bool MakeHitItemVisibility(FHitResult& HitResult);
+
+    void HideAllHittedItems()const;
 };
