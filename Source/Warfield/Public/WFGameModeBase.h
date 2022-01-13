@@ -7,13 +7,12 @@
 #include "WFGameModeBase.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class WARFIELD_API AWFGameModeBase : public AGameModeBase
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 public:
     AWFGameModeBase();
-	
 };

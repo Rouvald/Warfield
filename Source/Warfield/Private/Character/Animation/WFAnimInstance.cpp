@@ -1,13 +1,12 @@
 // Warfield Game. All Rigths Reserved
 
-
 #include "Character/Animation/WFAnimInstance.h"
 #include "WFBaseCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Components/WFCrossHairComponent.h"
 
-//DEFINE_LOG_CATEGORY_STATIC(LogWFAnimInstance, All, All);
+// DEFINE_LOG_CATEGORY_STATIC(LogWFAnimInstance, All, All);
 
 void UWFAnimInstance::UpdateAnimationProperties(float DeltaTime)
 {
@@ -23,9 +22,7 @@ void UWFAnimInstance::UpdateAnimationProperties(float DeltaTime)
 
         bIsInAir = BaseCharacter->GetCharacterMovement()->IsFalling();
 
-        BaseCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.0f
-            ? bIsAccelerating = true
-            : bIsAccelerating = false;
+        BaseCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.0f ? bIsAccelerating = true : bIsAccelerating = false;
 
         UpdateMovementDirection();
 

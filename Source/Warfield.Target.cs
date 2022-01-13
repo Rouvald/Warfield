@@ -5,10 +5,10 @@ using System.Collections.Generic;
 
 public class WarfieldTarget : TargetRules
 {
-	public WarfieldTarget( TargetInfo Target) : base(Target)
-	{
-		Type = TargetType.Game;
-		DefaultBuildSettings = BuildSettingsVersion.V2;
-		ExtraModuleNames.AddRange( new string[] { "Warfield" } );
-	}
+    public WarfieldTarget(TargetInfo Target) : base(Target)
+    {
+        Type = TargetType.Game;
+        DefaultBuildSettings = BuildSettingsVersion.V2;
+        ExtraModuleNames.AddRange(new string[] { "Warfield" });
+    }
 }

@@ -7,11 +7,10 @@
 #include "WFBaseWeapon.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class WARFIELD_API AWFBaseWeapon : public AWFBaseItem
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
 };

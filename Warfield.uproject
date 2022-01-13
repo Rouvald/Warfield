@@ -1,22 +1,23 @@
 {
-	"FileVersion": 3,
-	"EngineAssociation": "4.26",
-	"Category": "",
-	"Description": "",
-	"Modules": [
-		{
-			"Name": "Warfield",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"Engine"
-			]
-		}
-	],
-	"Plugins": [
-		{
-			"Name": "CascadeToNiagaraConverter",
-			"Enabled": true
-		}
-	]
+  "FileVersion": 3,
+  "EngineAssociation": "4.26",
+  "Category": "",
+  "Description": "",
+  "Modules": [
+    {
+      "Name": "Warfield",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "AdditionalDependencies": [
+        "Engine",
+        "UMG"
+      ]
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "CascadeToNiagaraConverter",
+      "Enabled": true
+    }
+  ]
 }

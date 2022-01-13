@@ -1,6 +1,5 @@
 // Warfield Game. All Rigths Reserved
 
-
 #include "Components/WFCrossHairComponent.h"
 #include "Character/WFBaseCharacter.h"
 #include "Camera/CameraComponent.h"
@@ -26,7 +25,6 @@ void UWFCrossHairComponent::BeginPlay()
         }
     }
 }
-
 
 void UWFCrossHairComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -77,8 +75,8 @@ void UWFCrossHairComponent::UpdateCrossHairSpread(const float DeltaTime)
     const auto EditCrossHairVelocitySpread{UpdateCrossHairVelocitySpread()};
 
     // In air Spread
-    UpdateInterpCrossHairSpread(Character->GetCharacterMovement()->IsFalling(), EditCrossHairInAirSpread, CrossHairInAirSpread, DeltaTime,
-        1.0f);
+    UpdateInterpCrossHairSpread(
+        Character->GetCharacterMovement()->IsFalling(), EditCrossHairInAirSpread, CrossHairInAirSpread, DeltaTime, 1.0f);
 
     // Aim Spread
     UpdateInterpCrossHairSpread(bIsAiming, EditCrossHairAimSpread, CrossHairAimSpread, DeltaTime);
@@ -87,14 +85,12 @@ void UWFCrossHairComponent::UpdateCrossHairSpread(const float DeltaTime)
     UpdateInterpCrossHairSpread(bIsShootingBullet, EditCrossHairShootingSpread, CrossHairShootingSpread, DeltaTime, 60.0f, 60.0f);
 
     // Total Current Spread
-    CurrentCrossHairSpread = FMath::Clamp
-        (
-            DefaultCrossHairSpread + EditCrossHairVelocitySpread + EditCrossHairInAirSpread - EditCrossHairAimSpread +
-            EditCrossHairShootingSpread, //
-            //
-            CrossHairSpreadRange.X, //
-            CrossHairSpreadRange.Y  //
-            );
+    CurrentCrossHairSpread = FMath::Clamp(DefaultCrossHairSpread + EditCrossHairVelocitySpread + EditCrossHairInAirSpread -
+                                              EditCrossHairAimSpread + EditCrossHairShootingSpread, //
+        //
+        CrossHairSpreadRange.X, //
+        CrossHairSpreadRange.Y  //
+    );
     //
 }
 
@@ -129,8 +125,8 @@ void UWFCrossHairComponent::StartCrossHairShoot()
     if (!GetWorld()) return;
 
     bIsShootingBullet = true;
-    GetWorld()->GetTimerManager().SetTimer(CrossHairShootTimerHandle, this, &UWFCrossHairComponent::StopCrossHairShoot,
-        ShootingTimeDuration, false);
+    GetWorld()->GetTimerManager().SetTimer(
+        CrossHairShootTimerHandle, this, &UWFCrossHairComponent::StopCrossHairShoot, ShootingTimeDuration, false);
 }
 
 void UWFCrossHairComponent::StopCrossHairShoot()
