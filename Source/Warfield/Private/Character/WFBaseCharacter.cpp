@@ -85,6 +85,12 @@ void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     DECLARE_DELEGATE_OneParam(FOnZoomSignature, bool);
     PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Pressed, CrossHairComponent, &UWFCrossHairComponent::Zoom, true);
     PlayerInputComponent->BindAction<FOnZoomSignature>("Zoom", IE_Released, CrossHairComponent, &UWFCrossHairComponent::Zoom, false);
+
+    PlayerInputComponent->BindAction("TakeWeapon", IE_Pressed, WeaponComponent, &UWFWeaponComponent::TakeWeaponButtonPressed);
+    PlayerInputComponent->BindAction("TakeWeapon", IE_Released, WeaponComponent, &UWFWeaponComponent::TakeWeaponButtonReleased);
+
+    PlayerInputComponent->BindAction("DropWeapon", IE_Pressed, WeaponComponent, &UWFWeaponComponent::DropWeaponButtonPressed);
+    PlayerInputComponent->BindAction("DropWeapon", IE_Released, WeaponComponent, &UWFWeaponComponent::DropWeaponButtonReleased);
 }
 
 void AWFBaseCharacter::MoveForward(const float Value)
@@ -119,8 +125,6 @@ void AWFBaseCharacter::AddControllerPitchInput(float Val)
     Super::AddControllerPitchInput(CrossHairComponent->GetCurrentMouseSensitivity(Val));
 }
 
-
-
 void AWFBaseCharacter::ItemInfoVisibilityTimer(const AWFBaseItem* Item, bool bIsOverlap)
 {
     const FTimerDelegate ItemTimerDelegate = FTimerDelegate::CreateUObject(this, &AWFBaseCharacter::UpdateItemInfoVisibility);
@@ -137,7 +141,7 @@ void AWFBaseCharacter::ItemInfoVisibilityTimer(const AWFBaseItem* Item, bool bIs
             GetWorldTimerManager().ClearTimer(ItemInfoVisibilityTimerHandle);
         }
     }
-    // UE_LOG(LogWFBaseCharacter, Warning, TEXT("HittedItems: %d"), HittedItems.Num());
+    //UE_LOG(LogWFBaseCharacter, Display, TEXT("HittedItems: %d"), HittedItems.Num());
 }
 
 void AWFBaseCharacter::UpdateItemInfoVisibility()
@@ -146,7 +150,7 @@ void AWFBaseCharacter::UpdateItemInfoVisibility()
 
     if (!MakeHitItemVisibility(HitItemResult)) return;
 
-    const auto HitItem = Cast<AWFBaseItem>(HitItemResult.GetActor());
+    HitItem = Cast<AWFBaseItem>(HitItemResult.GetActor());
     if (!HitItem)
     {
         HideAllHittedItems();

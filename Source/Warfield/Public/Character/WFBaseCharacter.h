@@ -36,6 +36,10 @@ public:
     FORCEINLINE UWFCrossHairComponent* GetCrossHairComponent() const { return CrossHairComponent; }
     */
 
+    FORCEINLINE AWFBaseItem* GetHitItem() const {return HitItem;}
+    /* @todo: Replace this method.*/
+    FORCEINLINE void SetHitItem(AWFBaseItem* NewHitItem) {HitItem = NewHitItem;}
+
 protected:
     virtual void BeginPlay() override;
 
@@ -58,9 +62,10 @@ private:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
     float ItemVisibilityTraceDistance = 5000.0f;
-    //
 
-    /* Item is overlap*/
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+    AWFBaseItem* HitItem{nullptr};
+    
     UPROPERTY()
     TArray<const AWFBaseItem*> HittedItems;
     //

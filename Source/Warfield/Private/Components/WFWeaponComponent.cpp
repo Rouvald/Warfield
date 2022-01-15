@@ -3,12 +3,9 @@
 #include "Components/WFWeaponComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
-#include "Sound/SoundCue.h"
 
 #include "WFBaseCharacter.h"
-#include "Components/WFCrossHairComponent.h"
 #include "WFBaseWeapon.h"
-#include "WFUtils.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFWeaponComponent, All, All)
 
@@ -22,18 +19,68 @@ void UWFWeaponComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    SpawnWeapon();
+    EquipWeapon(SpawnWeapon());
 }
 
-void UWFWeaponComponent::SpawnWeapon()
+void UWFWeaponComponent::StartFire()
+{
+    if (!CurrentWeapon) return;
+    CurrentWeapon->StartFire();
+}
+
+void UWFWeaponComponent::StopFire()
+{
+    if (!CurrentWeapon) return;
+    CurrentWeapon->StopFire();
+}
+
+void UWFWeaponComponent::TakeWeaponButtonPressed()
 {
     const auto Character = GetBaseCharacter();
-    if (!GetWorld() || !Character || !DefaultWeaponClass) return;
+    if(!Character || !Character->GetHitItem()) return;
+
+    const auto Weapon = Cast<AWFBaseWeapon>(Character->GetHitItem());
+    
+    SwapWeapon(Weapon);
+}
+
+void UWFWeaponComponent::TakeWeaponButtonReleased()
+{
+    
+}
+
+void UWFWeaponComponent::DropWeaponButtonPressed()
+{
+    //DropWeapon();
+}
+
+void UWFWeaponComponent::DropWeaponButtonReleased()
+{
+    
+}
+
+AWFBaseWeapon* UWFWeaponComponent::SpawnWeapon() const
+{
+    const auto Character = GetBaseCharacter();
+    if (!GetWorld() || !Character || !DefaultWeaponClass) return nullptr;
 
     const auto DefaultWeapon = GetWorld()->SpawnActor<AWFBaseWeapon>(DefaultWeaponClass);
-    if (!DefaultWeapon) return;
+    return DefaultWeapon;
+}
 
-    AttachWeaponToComponent(DefaultWeapon, Character->GetMesh(), WeaponSocketName);
+void UWFWeaponComponent::EquipWeapon(AWFBaseWeapon* EquippedWeapon)
+{
+    if (!EquippedWeapon) return;
+
+    const auto Character = GetBaseCharacter();
+    if(!Character) return;
+
+    EquippedWeapon->SetOwner(Character);
+
+    AttachWeaponToComponent(EquippedWeapon, Character->GetMesh(), WeaponSocketName);
+
+    CurrentWeapon = EquippedWeapon;
+    CurrentWeapon->OnItemStateChanged.Broadcast(EItemState::EIS_Equipped);
 }
 
 void UWFWeaponComponent::AttachWeaponToComponent(AWFBaseWeapon* Weapon, USceneComponent* SceneComponent, const FName& SocketName)
@@ -44,171 +91,28 @@ void UWFWeaponComponent::AttachWeaponToComponent(AWFBaseWeapon* Weapon, USceneCo
     Weapon->AttachToComponent(SceneComponent, AttachmentTransformRules, SocketName);
 }
 
-void UWFWeaponComponent::StartFire()
-{
-    bIsButtonFirePressed = true;
-    StartFireTimer();
-}
-
-void UWFWeaponComponent::StartFireTimer()
-{
-    if (!GetWorld()) return;
-    if (!bCanFire) return;
-
-    bCanFire = false;
-    GetWorld()->GetTimerManager().SetTimer(ShootTimerHandle, this, &UWFWeaponComponent::ResetFireTimer, ShootTimeRate);
-    MakeShot();
-}
-
-void UWFWeaponComponent::ResetFireTimer()
-{
-    bCanFire = true;
-    if (bIsButtonFirePressed)
-    {
-        StartFireTimer();
-    }
-}
-
-void UWFWeaponComponent::StopFire()
-{
-    bIsButtonFirePressed = false;
-}
-
-void UWFWeaponComponent::MakeShot()
-{
-    if (!GetWorld()) return;
-
-    const auto Character = GetBaseCharacter();
-    if (!Character) return;
-
-
-    FVector TraceStart, TraceEnd;
-    if (!WFUtils::GetTraceData(Character, TraceStart, TraceEnd, ShootTraceDistance)) return;
-
-    InitFX();
-
-    // Bullet Trace End FVector
-    FVector TraceFXEnd{TraceEnd};
-    //
-    // Hit from ViewPoint
-    FHitResult DefaultHitResult;
-    MakeHit(DefaultHitResult, TraceStart, TraceEnd, TraceFXEnd);
-
-    // Hit from WeaponMuzzleSocket
-    FHitResult WeaponHitResult;
-    FVector WeaponTraceStart{GetMuzzleSocketLocation()};
-    /*
-     * @note: Sometimes Trace can't reach DefaultHitResult.ImpactPoint
-     *        This 2 lines fix this error
-     */
-    const FVector StartToEndTraces{TraceFXEnd - GetMuzzleSocketLocation()};
-    FVector WeaponTraceEnd{GetMuzzleSocketLocation() + StartToEndTraces * 1.1f};
-    //
-    /* MakeHit for second trace, from weapon muzzle socket */
-    MakeHit(WeaponHitResult, WeaponTraceStart, WeaponTraceEnd, TraceFXEnd);
-
-    // DrawDebugSphere(GetWorld(), WeaponHitResult.ImpactPoint, 10.0f, 16, FColor::Green, false, 10.0f);
-
-    /*
-     * @note We have 2 FHitResult: DefaultHitResult and WeaponHitResult.
-     *       It's needed for correct build trace from WeaponMuzzle and HitPoint (if have HitPoint).
-     *       For Correct working FX we need use WeaponHitResult. Because If DefaultHitResult hit someone,
-     *       WeaponHitResult anyways hit same Object and will have same ImpactPoint.
-     *
-     *       Another situation:  Nothing had been hit
-     *       In this case for spawning FX will be used TraceFXEnd.
-     */
-
-    // Spawn FX
-    SpawnImpactFX(WeaponHitResult, TraceFXEnd);
-    SpawnTraceFX(GetMuzzleSocketLocation(), TraceFXEnd);
-    //
-
-    // Play recoil animation
-    PlayFireRecoilAnimMon();
-
-    // Shoot CrossHair Spread
-    const auto CrossHairComponent = Character->FindComponentByClass<UWFCrossHairComponent>();
-    if (CrossHairComponent)
-    {
-        CrossHairComponent->StartCrossHairShoot();
-    }
-}
-
-void UWFWeaponComponent::MakeHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd)
-{
-    if (!GetWorld()) return;
-
-    GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility);
-    // DrawDebugLine(GetWorld(), TraceStart, TraceEnd, FColor::Red, false, 10.0f);
-    if (HitResult.bBlockingHit)
-    {
-        TraceFXEnd = HitResult.ImpactPoint;
-        bIsHit = true;
-    }
-    else
-    {
-        bIsHit = false;
-    }
-}
-
-void UWFWeaponComponent::PlayFireRecoilAnimMon() const
-{
-    const auto Character = GetBaseCharacter();
-    if (!Character) return;
-    
-    const auto AnimInstance = Character->GetMesh()->GetAnimInstance();
-    if (AnimInstance && FireRecoilAnimMontage)
-    {
-        AnimInstance->Montage_Play(FireRecoilAnimMontage);
-        AnimInstance->Montage_JumpToSection(FName("StartFire")); // Name of Section in AnimMontage
-    }
-}
-
-void UWFWeaponComponent::InitFX() const
+void UWFWeaponComponent::SwapWeapon(AWFBaseWeapon* NewWeapon)
 {
     const auto Character = GetBaseCharacter();
     if(!Character) return;
-    // Muzzle FX
-    /* TODO: In future remade with SpawnAtLocation*/
-    UGameplayStatics::SpawnEmitterAttached(MuzzleFX, //
-        Character->GetMesh(),                                   //
-        WeaponMuzzleFXSocketName,                    //
-        FVector::ZeroVector,                         //
-        FRotator::ZeroRotator,                       //
-        EAttachLocation::SnapToTarget,               //
-        true                                         //
-        );
-    //UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetMuzzleSocketLocation());
-
-    // Sound
-    UGameplayStatics::SpawnSoundAtLocation(GetWorld(), ShootSound, GetMuzzleSocketLocation());
-}
-
-void UWFWeaponComponent::SpawnImpactFX(const FHitResult& HitResult, const FVector& TraceFXEnd) const
-{
-    // Impact FX
-    bIsHit
-        ? UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactFX, HitResult.ImpactPoint, HitResult.Normal.Rotation())
-        : UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), NoHitImpactFX, TraceFXEnd);
-}
-
-void UWFWeaponComponent::SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd) const
-{
-    // Trace FX
-    const auto TraceFXComponent = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), TraceFX, TraceFXStart);
-    if (TraceFXComponent)
-    {
-        TraceFXComponent->SetVectorParameter(FName("Target"), TraceFXEnd);
-    }
-}
-
-FVector UWFWeaponComponent::GetMuzzleSocketLocation() const
-{
-    const auto Character = GetBaseCharacter();
-    if(!Character) return FVector::ZeroVector;
     
-    return Character->GetMesh()->GetSocketLocation(WeaponMuzzleFXSocketName);
+    DropWeapon();
+    EquipWeapon(NewWeapon);
+    Character->SetHitItem(nullptr);
+}
+
+void UWFWeaponComponent::DropWeapon() const
+{
+    if(!CurrentWeapon) return;
+    
+    const auto ItemMesh = CurrentWeapon->FindComponentByClass<USkeletalMeshComponent>();
+    if(!ItemMesh) return;
+    
+    const FDetachmentTransformRules DetachmentTransformRules{EDetachmentRule::KeepWorld, true};
+    ItemMesh->DetachFromComponent(DetachmentTransformRules);
+
+    CurrentWeapon->OnItemStateChanged.Broadcast(EItemState::EIS_Falling);
+    CurrentWeapon->ThrowWeapon();
 }
 
 AWFBaseCharacter* UWFWeaponComponent::GetBaseCharacter() const

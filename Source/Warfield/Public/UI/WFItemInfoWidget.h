@@ -18,9 +18,9 @@ class WARFIELD_API UWFItemInfoWidget : public UUserWidget
 {
     GENERATED_BODY()
 public:
-    void SetItemName(FName Name) const;
-    void SetItemCount(int32 Count) const;
-    void SetItemRarityVisibility(int8 Rarity) const;
+    void SetItemName(const FName Name) const;
+    void SetItemCount(const int32 Count) const;
+    void SetItemRarityVisibility(const int8 Rarity) const;
 
 protected:
     virtual void NativeOnInitialized() override;

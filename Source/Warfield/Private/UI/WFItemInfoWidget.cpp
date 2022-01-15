@@ -37,7 +37,7 @@ void UWFItemInfoWidget::NativeOnInitialized()
     }
 }
 
-void UWFItemInfoWidget::SetItemName(FName Name) const
+void UWFItemInfoWidget::SetItemName(const FName Name) const
 {
     if (ItemName)
     {
@@ -45,7 +45,7 @@ void UWFItemInfoWidget::SetItemName(FName Name) const
     }
 }
 
-void UWFItemInfoWidget::SetItemCount(int32 Count) const
+void UWFItemInfoWidget::SetItemCount(const int32 Count) const
 {
     if (ItemCount)
     {
@@ -53,7 +53,7 @@ void UWFItemInfoWidget::SetItemCount(int32 Count) const
     }
 }
 
-void UWFItemInfoWidget::SetItemRarityVisibility(int8 Rarity) const
+void UWFItemInfoWidget::SetItemRarityVisibility(const int8 Rarity) const
 {
     const auto RarityWidgets = ItemRarityBox->GetAllChildren();
     if(RarityWidgets.Num() == 0) return;
