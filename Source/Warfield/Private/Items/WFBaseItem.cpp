@@ -3,6 +3,8 @@
 #include "Items/WFBaseItem.h"
 
 #include "WFBaseCharacter.h"
+#include "WFWeaponComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
@@ -56,6 +58,8 @@ void AWFBaseItem::BeginPlay()
 void AWFBaseItem::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    ItemIterping(DeltaTime);
 }
 
 void AWFBaseItem::OnAreaBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
@@ -128,7 +132,7 @@ void AWFBaseItem::SetItemState(EItemState NewItemState)
 
     CurrentItemState = NewItemState;
     SetItemProperties(NewItemState);
-    //UE_LOG(LogWFBaseItem, Display, TEXT("CurrentItemState: %s"), *UEnum::GetValueAsString(CurrentItemState));
+    //UE_LOG(LogWFBaseItem, Display, TEXT("%s: CurrentItemState: %s"), *GetName(), *UEnum::GetValueAsString(CurrentItemState));
 }
 
 void AWFBaseItem::FillItemPropertiesMap()
@@ -148,7 +152,7 @@ void AWFBaseItem::FillItemPropertiesMap()
      ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Ignore,
      ECollisionEnabled::NoCollision,
      ECollisionResponse::ECR_Ignore, ECollisionEnabled::NoCollision,
-     ECollisionResponse::ECR_Ignore, ECollisionEnabled::QueryAndPhysics,
+     ECollisionResponse::ECR_Ignore, ECollisionEnabled::NoCollision,
      ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore
     });
 
@@ -159,6 +163,15 @@ void AWFBaseItem::FillItemPropertiesMap()
      ECollisionResponse::ECR_Ignore, ECollisionEnabled::NoCollision,
      ECollisionResponse::ECR_Ignore, ECollisionEnabled::NoCollision,
      ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore
+    });
+
+    ItemPropertiesMap.Add(EItemState::EIS_EquipInProgress, FItemProperties
+    {false, false, true, ECollisionResponse::ECR_Ignore,
+     ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Ignore,
+     ECollisionEnabled::NoCollision,
+     ECollisionResponse::ECR_Overlap, ECollisionEnabled::NoCollision,
+     ECollisionResponse::ECR_Ignore, ECollisionEnabled::NoCollision,
+     ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore,
     });
 }
 
@@ -185,4 +198,93 @@ void AWFBaseItem::SetItemProperties(EItemState NewItemState) const
         ItemPropertiesMap[NewItemState].BoxCollisionResponseToChannel);
     BoxCollision->SetCollisionEnabled(ItemPropertiesMap[NewItemState].BoxCollisionEnabled);
     //
+}
+
+void AWFBaseItem::StartItemInterping(AWFBaseCharacter* Character)
+{
+    if (!Character) return;
+    BaseCharacter = Character;
+    ItemBaseLocation = GetActorLocation();
+    bIsItemInterping = true;
+    SetItemState(EItemState::EIS_EquipInProgress);
+
+    GetWorldTimerManager().SetTimer(ItemInterpingTimerHandle, this, &AWFBaseItem::FinishItemInterping, ItemZCurveTime);
+
+    /*if (BaseCharacter->GetFollowCamera())
+    {
+        const float CameraRotationYaw{BaseCharacter->GetFollowCamera()->GetComponentRotation().Yaw};
+        const float ItemRotationYaw{GetActorRotation().Yaw};
+        DefaultRotationYawOffset = ItemRotationYaw - CameraRotationYaw;
+    }*/
+}
+
+void AWFBaseItem::ItemIterping(float DeltaTime)
+{
+    if (!bIsItemInterping) return;
+
+    FVector ItemLocation = ItemBaseLocation;
+    ItemInterpXY(ItemLocation, DeltaTime);
+    ItemInterpZ(ItemLocation);
+
+    SetActorLocation(ItemLocation, true, nullptr, ETeleportType::TeleportPhysics);
+
+    ItemInterpRotationYaw();
+    ItemInterpScale();
+}
+
+void AWFBaseItem::ItemInterpXY(FVector& ItemLocation, float DeltaTime)
+{
+    if (!BaseCharacter) return;
+
+    const auto ItemCurrentLocation = GetActorLocation();
+    const auto CameraIterpLocation = BaseCharacter->GetCameraInterpLocation();
+
+    const float ItemInterpXValue = FMath::FInterpTo(ItemCurrentLocation.X, CameraIterpLocation.X, DeltaTime, ItemInterpSpeed);
+    const float ItemInterpYValue = FMath::FInterpTo(ItemCurrentLocation.Y, CameraIterpLocation.Y, DeltaTime, ItemInterpSpeed);
+
+    ItemLocation.X = ItemInterpXValue;
+    ItemLocation.Y = ItemInterpYValue;
+}
+
+void AWFBaseItem::ItemInterpZ(FVector& ItemLocation)
+{
+    if (!BaseCharacter || !ItemZCurve) return;
+
+    const float CurveValue {ItemZCurve->GetFloatValue(GetWorldTimerManager().GetTimerElapsed(ItemInterpingTimerHandle))};
+    const auto CameraIterpLocation = BaseCharacter->GetCameraInterpLocation();
+
+    const auto ItemToCamera{FVector{0.0f, 0.0f, (CameraIterpLocation - ItemLocation).Z}};
+    const float DeltaZ = ItemToCamera.Size();
+    ItemLocation.Z += CurveValue * DeltaZ;
+}
+
+void AWFBaseItem::ItemInterpRotationYaw()
+{
+    if (!BaseCharacter || !BaseCharacter->GetFollowCamera()) return;
+
+    const FRotator CameraRotation{BaseCharacter->GetFollowCamera()->GetComponentRotation()};
+    //const FRotator NewItemRotation { 0.0f, CameraRotation.Yaw/* + DefaultRotationYawOffset*/, 0.0f};
+    SetActorRotation(FRotator{0.0f, 180.0f + CameraRotation.Yaw, 0.0f}, ETeleportType::TeleportPhysics);
+}
+
+void AWFBaseItem::ItemInterpScale()
+{
+    if(!ItemScaleCurve) return;
+
+    const float CurveScaleValue{ItemScaleCurve->GetFloatValue(GetWorldTimerManager().GetTimerElapsed(ItemInterpingTimerHandle))};
+    SetActorScale3D(FVector{CurveScaleValue});
+}
+
+void AWFBaseItem::FinishItemInterping()
+{
+    bIsItemInterping = false;
+
+    if (!BaseCharacter) return;
+
+    const auto WeaponComponent = BaseCharacter->FindComponentByClass<UWFWeaponComponent>();
+    if (!WeaponComponent) return;
+
+    WeaponComponent->GetPickupItem(this);
+    // Return default scale
+    SetActorScale3D(FVector{1.0f});
 }

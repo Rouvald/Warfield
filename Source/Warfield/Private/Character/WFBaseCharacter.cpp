@@ -11,6 +11,7 @@
 #include "Components/WFCrossHairComponent.h"
 #include "Components/WFWeaponComponent.h"
 #include "WFBaseItem.h"
+#include "WFBaseWeapon.h"
 #include "WFUtils.h"
 
 
@@ -131,7 +132,7 @@ void AWFBaseCharacter::ItemInfoVisibilityTimer(const AWFBaseItem* Item, bool bIs
     if (bIsOverlap)
     {
         GetWorldTimerManager().SetTimer(ItemInfoVisibilityTimerHandle, ItemTimerDelegate, 0.1f, true);
-        HittedItems.Add(Item);
+        HittedItems.AddUnique(Item);
     }
     else
     {
@@ -193,3 +194,10 @@ void AWFBaseCharacter::HideAllHittedItems() const
         }
     }
 }
+
+FVector AWFBaseCharacter::GetCameraInterpLocation() const
+{
+    return FollowCamera->GetComponentLocation() + FollowCamera->GetForwardVector() * CameraInterpDistance +
+           FVector{0.0f, 0.0f, CameraInterpElevation};
+}
+

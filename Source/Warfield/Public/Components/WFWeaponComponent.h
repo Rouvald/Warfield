@@ -8,6 +8,7 @@
 
 class AWFBaseCharacter;
 class AWFBaseWeapon;
+class AWFBaseItem;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class WARFIELD_API UWFWeaponComponent : public UActorComponent
@@ -25,6 +26,8 @@ public:
 
     void DropWeaponButtonPressed();
     void DropWeaponButtonReleased();
+
+    void GetPickupItem( AWFBaseItem* Item);
 
 protected:
     virtual void BeginPlay() override;

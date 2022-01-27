@@ -40,8 +40,10 @@ void UWFWeaponComponent::TakeWeaponButtonPressed()
     if(!Character || !Character->GetHitItem()) return;
 
     const auto Weapon = Cast<AWFBaseWeapon>(Character->GetHitItem());
-    
-    SwapWeapon(Weapon);
+    if(Weapon)
+    {
+        Weapon->StartItemInterping(Character);
+    }
 }
 
 void UWFWeaponComponent::TakeWeaponButtonReleased()
@@ -98,7 +100,7 @@ void UWFWeaponComponent::SwapWeapon(AWFBaseWeapon* NewWeapon)
     
     DropWeapon();
     EquipWeapon(NewWeapon);
-    Character->SetHitItem(nullptr);
+    Character->ClearHitItem();
 }
 
 void UWFWeaponComponent::DropWeapon() const
@@ -115,7 +117,16 @@ void UWFWeaponComponent::DropWeapon() const
     CurrentWeapon->ThrowWeapon();
 }
 
-AWFBaseCharacter* UWFWeaponComponent::GetBaseCharacter() const
+AWFBaseCharacter* UWFWeaponComponent::GetBaseCharacter() const 
 {
     return Cast<AWFBaseCharacter>(GetOwner());
+}
+
+void UWFWeaponComponent::GetPickupItem( AWFBaseItem* Item)
+{
+    const auto Weapon = Cast<AWFBaseWeapon>(Item);
+    if(Weapon)
+    {
+        SwapWeapon(Weapon);
+    }
 }

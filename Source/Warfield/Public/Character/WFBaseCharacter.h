@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WFBaseItem.h"
 #include "GameFramework/Character.h"
 #include "WFCoreTypes.h"
 #include "WFBaseCharacter.generated.h"
@@ -28,17 +29,17 @@ public:
 
     virtual void Tick(float DeltaTime) override;
 
-    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-    /*
+    virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+    
     FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
     FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
     FORCEINLINE UWFCrossHairComponent* GetCrossHairComponent() const { return CrossHairComponent; }
-    */
-
+    
     FORCEINLINE AWFBaseItem* GetHitItem() const {return HitItem;}
-    /* @todo: Replace this method.*/
-    FORCEINLINE void SetHitItem(AWFBaseItem* NewHitItem) {HitItem = NewHitItem;}
+    /* @note: Not good decision, but OK, i think.*/
+    FORCEINLINE void ClearHitItem() {HitItem = nullptr;}
+
+    FVector GetCameraInterpLocation() const;
 
 protected:
     virtual void BeginPlay() override;
@@ -63,12 +64,19 @@ private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
     float ItemVisibilityTraceDistance = 5000.0f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY()
     AWFBaseItem* HitItem{nullptr};
     
     UPROPERTY()
     TArray<const AWFBaseItem*> HittedItems;
     //
+
+    // Item iterp
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+    float CameraInterpDistance {250.0f};
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+    float CameraInterpElevation {70.0f};
     
     void MoveForward(const float Value);
     void MoveRight(const float Value);

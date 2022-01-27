@@ -1,4 +1,4 @@
-// Warfield Game. All Rigths Reserved
+// Warfield Game. All Rights Reserved
 
 #include "Items/WFBaseWeapon.h"
 #include "Kismet/GameplayStatics.h"
@@ -138,11 +138,6 @@ void AWFBaseWeapon::MakeHit(FHitResult& HitResult, const FVector& TraceStart, co
     if (HitResult.bBlockingHit)
     {
         TraceFXEnd = HitResult.ImpactPoint;
-        bIsHit = true;
-    }
-    else
-    {
-        bIsHit = false;
     }
 }
 
@@ -161,19 +156,20 @@ void AWFBaseWeapon::PlayFireRecoilAnimMon() const
 
 void AWFBaseWeapon::InitFX() const
 {
+    // Muzzle FX
     const auto Character = GetBaseCharacter();
     if (!Character) return;
-    // Muzzle FX
+
     /* @todo: In future remade with SpawnAtLocation */
-    UGameplayStatics::SpawnEmitterAttached(MuzzleFX, //
+    /*UGameplayStatics::SpawnEmitterAttached(MuzzleFX, //
         Character->GetMesh(),                        //
         WeaponMuzzleFXSocketName,                    //
         FVector::ZeroVector,                         //
         FRotator::ZeroRotator,                       //
         EAttachLocation::SnapToTarget,               //
         true                                         //
-        );
-    //UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetMuzzleSocketLocation(), GetMuzzleSocketLocation().Rotation());
+        );*/
+    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetMuzzleSocketLocation(), GetMuzzleSocketLocation().Rotation());
 
     // Sound
     UGameplayStatics::SpawnSoundAtLocation(GetWorld(), ShootSound, GetMuzzleSocketLocation());
@@ -182,7 +178,7 @@ void AWFBaseWeapon::InitFX() const
 void AWFBaseWeapon::SpawnImpactFX(const FHitResult& HitResult, const FVector& TraceFXEnd) const
 {
     // Impact FX
-    bIsHit
+    HitResult.bBlockingHit
         ? UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactFX, HitResult.ImpactPoint, HitResult.Normal.Rotation())
         : UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), NoHitImpactFX, TraceFXEnd);
 }

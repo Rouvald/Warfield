@@ -7,10 +7,12 @@
 #include "WFCoreTypes.h"
 #include "WFBaseItem.generated.h"
 
+class AWFBaseCharacter;
 class UBoxComponent;
 class USphereComponent;
 class UWidgetComponent;
 class UWFItemInfoWidget;
+class UCurveFloat;
 
 UCLASS()
 class WARFIELD_API AWFBaseItem : public AActor
@@ -23,6 +25,8 @@ public:
     FOnItemStateChangedSignature OnItemStateChanged;
 
     virtual void Tick(float DeltaTime) override;
+
+    void StartItemInterping(AWFBaseCharacter* Character);
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -37,6 +41,8 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     UWidgetComponent* ItemInfoWidgetComponent;
 
+
+    /* Item Properties*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
     FName ItemName{"BaseItem"};
 
@@ -46,11 +52,32 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
     EItemRarity ItemRarity{EItemRarity::EIR_Damaged};
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
+    UCurveFloat* ItemZCurve;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
+    float ItemZCurveTime{0.7f};
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
+    UCurveFloat* ItemScaleCurve;
+
+    FTimerHandle ItemInterpingTimerHandle;
+    bool bIsItemInterping{false};
+
+    UPROPERTY()
+    AWFBaseCharacter* BaseCharacter{nullptr};
+
+    UPROPERTY()
+    FVector ItemBaseLocation{FVector::ZeroVector};
+    float ItemInterpSpeed{30.0f};
+    //float DefaultRotationYawOffset{0.0f};
+
     EItemState CurrentItemState{EItemState::EIS_Pickup};
 
     UPROPERTY()
     TMap<EItemState, FItemProperties> ItemPropertiesMap;
-
+    //
+    
     //
     virtual void BeginPlay() override;
     //
@@ -70,4 +97,12 @@ protected:
     UFUNCTION()
     void OnAreaEndOverlap(
         UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+    void ItemIterping(float DeltaTime);
+    void ItemInterpXY(FVector& ItemLocation, float DeltaTime);
+    void ItemInterpZ(FVector& ItemLocation);
+    void ItemInterpRotationYaw();
+    void ItemInterpScale();
+    
+    void FinishItemInterping();
 };

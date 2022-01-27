@@ -66,8 +66,6 @@ private:
     float WeaponFallingTime{0.6f};
     bool bIsWeaponFalling{false};
 
-    bool bIsHit = false;
-
     void StartFireTimer();
     void ResetFireTimer();
 
