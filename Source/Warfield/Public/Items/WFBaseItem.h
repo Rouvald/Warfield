@@ -28,6 +28,8 @@ public:
 
     void StartItemInterping(AWFBaseCharacter* Character);
 
+    FORCEINLINE FName GetItemName() const {return ItemName;}
+
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
     USkeletalMeshComponent* ItemMesh;

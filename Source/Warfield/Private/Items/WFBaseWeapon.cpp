@@ -6,33 +6,41 @@
 #include "Sound/SoundCue.h"
 
 #include "WFBaseCharacter.h"
-#include "Components/WFCrossHairComponent.h"
+//#include "Components/WFCrossHairComponent.h"
 #include "WFUtils.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseWeapon, All, All)
 
+void AWFBaseWeapon::BeginPlay()
+{
+    Super::BeginPlay();
+
+    checkf(DefaultBulletAmount > 0, TEXT("Bullet amount can be <= 0"));
+    CurrentBulletAmount = DefaultBulletAmount;
+}
+
 void AWFBaseWeapon::StartFire()
 {
     bIsButtonFirePressed = true;
-    StartFireTimer();
+    MakeShot();
 }
 
 void AWFBaseWeapon::StartFireTimer()
 {
     if (!GetWorld()) return;
-    if (!bCanFire) return;
-
-    bCanFire = false;
+    CurrentWeaponState = EWeaponState::EWS_FireInProgress;
     GetWorldTimerManager().SetTimer(ShootTimerHandle, this, &AWFBaseWeapon::ResetFireTimer, ShootTimeRate);
-    MakeShot();
 }
 
 void AWFBaseWeapon::ResetFireTimer()
 {
-    bCanFire = true;
-    if (bIsButtonFirePressed)
+    CurrentWeaponState = EWeaponState::EWS_Unoccupied;
+    if (!IsAmmoEmpty())
     {
-        StartFireTimer();
+        if (bIsButtonFirePressed)
+        {
+            MakeShot();
+        }
     }
 }
 
@@ -41,43 +49,23 @@ void AWFBaseWeapon::StopFire()
     bIsButtonFirePressed = false;
 }
 
-void AWFBaseWeapon::ThrowWeapon()
-{
-    const FRotator MeshRotation{0.0f, ItemMesh->GetComponentRotation().Yaw, 1.0f};
-    ItemMesh->SetWorldRotation(MeshRotation, false, nullptr, ETeleportType::TeleportPhysics);
-
-    const auto MeshForwardVector{ItemMesh->GetForwardVector()};
-    const auto MeshRightVector{ItemMesh->GetRightVector()};
-    auto ThrowingDirection{MeshRightVector.RotateAngleAxis(-20.f, MeshForwardVector)};
-
-    const float RandomRotation{FMath::FRandRange(25.0f, 35.0f)};
-    ThrowingDirection = ThrowingDirection.RotateAngleAxis(RandomRotation, FVector{0.0f, 0.0f, 1.0f});
-    ThrowingDirection *= 5000.0f;
-
-    ItemMesh->AddImpulse(ThrowingDirection);
-
-    bIsWeaponFalling = true;
-    GetWorldTimerManager().SetTimer(ThrowingTimerHandle, this, &AWFBaseWeapon::StopFalling, WeaponFallingTime, false);
-}
-
-void AWFBaseWeapon::StopFalling()
-{
-    bIsWeaponFalling = false;
-    if(CurrentItemState == EItemState::EIS_Falling)
-    {
-        const FRotator MeshRotation{0.0f, ItemMesh->GetComponentRotation().Yaw, 1.0f};
-        ItemMesh->SetWorldRotation(MeshRotation, false, nullptr, ETeleportType::TeleportPhysics);
-    }
-    OnItemStateChanged.Broadcast(EItemState::EIS_Pickup);
-}
-
 void AWFBaseWeapon::MakeShot()
 {
+    if (!GetWorld() || CurrentWeaponState != EWeaponState::EWS_Unoccupied || IsAmmoEmpty())
+    {
+        StopFire();
+        return;
+    }
+
     const auto Character = GetBaseCharacter();
     if (!Character) return;
 
     FVector TraceStart, TraceEnd;
-    if (!WFUtils::GetTraceData(Character, TraceStart, TraceEnd, ShootTraceDistance)) return;
+    if (!WFUtils::GetTraceData(Character, TraceStart, TraceEnd, ShootTraceDistance))
+    {
+        StopFire();
+        return;
+    }
 
     InitFX();
 
@@ -101,8 +89,6 @@ void AWFBaseWeapon::MakeShot()
     /* MakeHit for second trace, from weapon muzzle socket */
     MakeHit(WeaponHitResult, WeaponTraceStart, WeaponTraceEnd, TraceFXEnd);
 
-    // DrawDebugSphere(GetWorld(), WeaponHitResult.ImpactPoint, 10.0f, 16, FColor::Green, false, 10.0f);
-
     /*
      * @note We have 2 FHitResult: DefaultHitResult and WeaponHitResult.
      *       It's needed for correct build trace from WeaponMuzzle and HitPoint (if have HitPoint).
@@ -121,12 +107,18 @@ void AWFBaseWeapon::MakeShot()
     // Play recoil animation
     PlayFireRecoilAnimMon();
 
+    // Decrease Ammo after make shot
+    DecreaseAmmo();
+
+    // Start timer for next Weapon shot
+    StartFireTimer();
+
     // Shoot CrossHair Spread
-    const auto CrossHairComponent = Character->FindComponentByClass<UWFCrossHairComponent>();
+    /*const auto CrossHairComponent = Character->FindComponentByClass<UWFCrossHairComponent>();
     if (CrossHairComponent)
     {
         CrossHairComponent->StartCrossHairShoot();
-    }
+    }*/
 }
 
 void AWFBaseWeapon::MakeHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd)
@@ -157,8 +149,8 @@ void AWFBaseWeapon::PlayFireRecoilAnimMon() const
 void AWFBaseWeapon::InitFX() const
 {
     // Muzzle FX
-    const auto Character = GetBaseCharacter();
-    if (!Character) return;
+    /*const auto Character = GetBaseCharacter();
+    if (!Character) return;*/
 
     /* @todo: In future remade with SpawnAtLocation */
     /*UGameplayStatics::SpawnEmitterAttached(MuzzleFX, //
@@ -193,12 +185,65 @@ void AWFBaseWeapon::SpawnTraceFX(const FVector& TraceFXStart, const FVector& Tra
     }
 }
 
+void AWFBaseWeapon::ThrowWeapon()
+{
+    const FRotator MeshRotation{0.0f, ItemMesh->GetComponentRotation().Yaw, 1.0f};
+    ItemMesh->SetWorldRotation(MeshRotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+    const auto MeshForwardVector{ItemMesh->GetForwardVector()};
+    const auto MeshRightVector{ItemMesh->GetRightVector()};
+    auto ThrowingDirection{MeshRightVector.RotateAngleAxis(-20.f, MeshForwardVector)};
+
+    const float RandomRotation{FMath::FRandRange(25.0f, 35.0f)};
+    ThrowingDirection = ThrowingDirection.RotateAngleAxis(RandomRotation, FVector{0.0f, 0.0f, 1.0f});
+    ThrowingDirection *= 5000.0f;
+
+    ItemMesh->AddImpulse(ThrowingDirection);
+
+    bIsWeaponFalling = true;
+    GetWorldTimerManager().SetTimer(ThrowingTimerHandle, this, &AWFBaseWeapon::StopFalling, WeaponFallingTime, false);
+}
+
+void AWFBaseWeapon::StopFalling()
+{
+    bIsWeaponFalling = false;
+    if (CurrentItemState == EItemState::EIS_Falling)
+    {
+        const FRotator MeshRotation{0.0f, ItemMesh->GetComponentRotation().Yaw, 1.0f};
+        ItemMesh->SetWorldRotation(MeshRotation, false, nullptr, ETeleportType::TeleportPhysics);
+    }
+    OnItemStateChanged.Broadcast(EItemState::EIS_Pickup);
+}
+
+void AWFBaseWeapon::SetAmmoData() const
+{
+}
+
+bool AWFBaseWeapon::IsAmmoEmpty() const
+{
+    return CurrentBulletAmount == 0;
+}
+
+bool AWFBaseWeapon::IsAmmoFull() const
+{
+    return CurrentBulletAmount == DefaultBulletAmount;
+}
+
+void AWFBaseWeapon::DecreaseAmmo()
+{
+    if (IsAmmoEmpty()) return;
+
+    --CurrentBulletAmount;
+
+    if (IsAmmoEmpty())
+    {
+        StopFire();
+    }
+}
+
 FVector AWFBaseWeapon::GetMuzzleSocketLocation() const
 {
-    const auto Character = GetBaseCharacter();
-    if (!Character) return FVector::ZeroVector;
-
-    return Character->GetMesh()->GetSocketLocation(WeaponMuzzleFXSocketName);
+    return ItemMesh->GetSocketLocation(WeaponMuzzleFXSocketName);
 }
 
 AWFBaseCharacter* AWFBaseWeapon::GetBaseCharacter() const

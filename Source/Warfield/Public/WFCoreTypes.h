@@ -82,3 +82,27 @@ struct FItemProperties
     ECollisionResponse BoxCollisionResponseToChannel;
     //
 };
+
+// Weapon Data
+
+UENUM(BlueprintType)
+enum class EAmmoType : uint8
+{
+    EIR_Revolver UMETA(DisplayName="Revolver"),
+    EIR_AR UMETA(DisplayName="Assault Rifle"),
+
+    EIR_MAX UMETA(DisplayName = "MAX")
+};
+
+
+// Weapon State
+
+UENUM(BlueprintType)
+enum class EWeaponState : uint8
+{
+    EWS_Unoccupied UMETA(DisplayName="Unoccupied"),
+    EWS_FireInProgress UMETA(DisplayName="FireInProgress"),
+    EWS_Reloading UMETA(DisplayName="Reloading"),
+
+    EWS_MAX UMETA(DisplayName = "MAX")
+};

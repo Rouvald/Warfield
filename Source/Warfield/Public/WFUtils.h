@@ -20,4 +20,9 @@ public:
         TraceEnd = TraceStart + ShootDirection * TraceDistance;
         return true;
     }
+
+    static FText TextFromInt(const int32 Number)
+    {
+        return FText::FromString(FString::FromInt(Number));
+    }
 };

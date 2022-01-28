@@ -29,6 +29,8 @@ public:
 
     void GetPickupItem( AWFBaseItem* Item);
 
+    FORCEINLINE AWFBaseWeapon* GetCurrentWeapon() const {return CurrentWeapon;}
+
 protected:
     virtual void BeginPlay() override;
 
