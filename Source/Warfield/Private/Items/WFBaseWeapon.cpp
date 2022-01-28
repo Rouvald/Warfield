@@ -8,6 +8,7 @@
 #include "WFBaseCharacter.h"
 //#include "Components/WFCrossHairComponent.h"
 #include "WFUtils.h"
+#include "WFWeaponComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseWeapon, All, All)
 
@@ -17,6 +18,8 @@ void AWFBaseWeapon::BeginPlay()
 
     checkf(DefaultBulletAmount > 0, TEXT("Bullet amount can be <= 0"));
     CurrentBulletAmount = DefaultBulletAmount;
+
+    OnWeaponStateChanged.AddUObject(this, &AWFBaseWeapon::SetWeaponState);
 }
 
 void AWFBaseWeapon::StartFire()
@@ -28,13 +31,13 @@ void AWFBaseWeapon::StartFire()
 void AWFBaseWeapon::StartFireTimer()
 {
     if (!GetWorld()) return;
-    CurrentWeaponState = EWeaponState::EWS_FireInProgress;
+    SetWeaponState(EWeaponState::EWS_FireInProgress);
     GetWorldTimerManager().SetTimer(ShootTimerHandle, this, &AWFBaseWeapon::ResetFireTimer, ShootTimeRate);
 }
 
 void AWFBaseWeapon::ResetFireTimer()
 {
-    CurrentWeaponState = EWeaponState::EWS_Unoccupied;
+    SetWeaponState(EWeaponState::EWS_Unoccupied);
     if (!IsAmmoEmpty())
     {
         if (bIsButtonFirePressed)
@@ -57,7 +60,7 @@ void AWFBaseWeapon::MakeShot()
         return;
     }
 
-    const auto Character = GetBaseCharacter();
+    const auto Character = GetCharacter();
     if (!Character) return;
 
     FVector TraceStart, TraceEnd;
@@ -78,13 +81,13 @@ void AWFBaseWeapon::MakeShot()
 
     // Hit from WeaponMuzzleSocket
     FHitResult WeaponHitResult;
-    FVector WeaponTraceStart{GetMuzzleSocketLocation()};
+    FVector WeaponTraceStart{GetMuzzleSocketTransform().GetLocation()};
     /*
      * @note: Sometimes Trace can't reach DefaultHitResult.ImpactPoint
      *        This 2 lines fix this error
      */
-    const FVector StartToEndTraces{TraceFXEnd - GetMuzzleSocketLocation()};
-    FVector WeaponTraceEnd{GetMuzzleSocketLocation() + StartToEndTraces * 1.1f};
+    const FVector StartToEndTraces{TraceFXEnd - WeaponTraceStart};
+    FVector WeaponTraceEnd{WeaponTraceStart + StartToEndTraces * 1.1f};
     //
     /* MakeHit for second trace, from weapon muzzle socket */
     MakeHit(WeaponHitResult, WeaponTraceStart, WeaponTraceEnd, TraceFXEnd);
@@ -101,17 +104,17 @@ void AWFBaseWeapon::MakeShot()
 
     // Spawn FX
     SpawnImpactFX(WeaponHitResult, TraceFXEnd);
-    SpawnTraceFX(GetMuzzleSocketLocation(), TraceFXEnd);
+    SpawnTraceFX(GetMuzzleSocketTransform().GetLocation(), TraceFXEnd);
     //
-
-    // Play recoil animation
-    PlayFireRecoilAnimMon();
 
     // Decrease Ammo after make shot
     DecreaseAmmo();
 
     // Start timer for next Weapon shot
     StartFireTimer();
+
+    // Play recoil animation
+    PlayFireRecoilAnimMontage();
 
     // Shoot CrossHair Spread
     /*const auto CrossHairComponent = Character->FindComponentByClass<UWFCrossHairComponent>();
@@ -133,23 +136,11 @@ void AWFBaseWeapon::MakeHit(FHitResult& HitResult, const FVector& TraceStart, co
     }
 }
 
-void AWFBaseWeapon::PlayFireRecoilAnimMon() const
-{
-    const auto Character = GetBaseCharacter();
-    if (!Character) return;
-
-    const auto AnimInstance = Character->GetMesh()->GetAnimInstance();
-    if (AnimInstance && FireRecoilAnimMontage)
-    {
-        AnimInstance->Montage_Play(FireRecoilAnimMontage);
-        AnimInstance->Montage_JumpToSection(FName("StartFire")); // Name of Section in AnimMontage
-    }
-}
 
 void AWFBaseWeapon::InitFX() const
 {
     // Muzzle FX
-    /*const auto Character = GetBaseCharacter();
+    /*const auto Character = GetCharacter();
     if (!Character) return;*/
 
     /* @todo: In future remade with SpawnAtLocation */
@@ -161,10 +152,10 @@ void AWFBaseWeapon::InitFX() const
         EAttachLocation::SnapToTarget,               //
         true                                         //
         );*/
-    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetMuzzleSocketLocation(), GetMuzzleSocketLocation().Rotation());
+    UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetMuzzleSocketTransform());
 
     // Sound
-    UGameplayStatics::SpawnSoundAtLocation(GetWorld(), ShootSound, GetMuzzleSocketLocation());
+    UGameplayStatics::SpawnSoundAtLocation(GetWorld(), ShootSound, GetMuzzleSocketTransform().GetLocation());
 }
 
 void AWFBaseWeapon::SpawnImpactFX(const FHitResult& HitResult, const FVector& TraceFXEnd) const
@@ -183,6 +174,17 @@ void AWFBaseWeapon::SpawnTraceFX(const FVector& TraceFXStart, const FVector& Tra
     {
         TraceFXComponent->SetVectorParameter(FName("Target"), TraceFXEnd);
     }
+}
+
+void AWFBaseWeapon::PlayFireRecoilAnimMontage()
+{
+    const auto Character = GetCharacter();
+    if (!Character) return;
+
+    const auto WeaponComponent = Character->FindComponentByClass<UWFWeaponComponent>();
+    if (!WeaponComponent) return;
+
+    WFUtils::PlayAnimMontage(Character, WeaponComponent->GetCurrentWeaponData().FireRecoilAnimMontage, FireSectionName);
 }
 
 void AWFBaseWeapon::ThrowWeapon()
@@ -215,6 +217,21 @@ void AWFBaseWeapon::StopFalling()
     OnItemStateChanged.Broadcast(EItemState::EIS_Pickup);
 }
 
+void AWFBaseWeapon::Reload(int32& CharacterBulletAmount)
+{
+    // @todo: create public CanReload for WeaponComponent
+    if (CurrentWeaponState != EWeaponState::EWS_Unoccupied) return;
+
+    SetWeaponState(EWeaponState::EWS_Reloading);
+}
+
+void AWFBaseWeapon::SetWeaponState(EWeaponState NewWeaponState)
+{
+    if (CurrentWeaponState == NewWeaponState) return;
+    CurrentWeaponState = NewWeaponState;
+    //UE_LOG(LogWFBaseWeapon,Display, TEXT("%s"), *UEnum::GetValueAsString(NewWeaponState));
+}
+
 void AWFBaseWeapon::SetAmmoData() const
 {
 }
@@ -241,12 +258,13 @@ void AWFBaseWeapon::DecreaseAmmo()
     }
 }
 
-FVector AWFBaseWeapon::GetMuzzleSocketLocation() const
+FTransform AWFBaseWeapon::GetMuzzleSocketTransform() const
 {
-    return ItemMesh->GetSocketLocation(WeaponMuzzleFXSocketName);
+    //return ItemMesh->GetSocketLocation(WeaponMuzzleFXSocketName);
+    return ItemMesh->GetSocketTransform(WeaponMuzzleFXSocketName);
 }
 
-AWFBaseCharacter* AWFBaseWeapon::GetBaseCharacter() const
+AWFBaseCharacter* AWFBaseWeapon::GetCharacter() const
 {
     return Cast<AWFBaseCharacter>(GetOwner());
 }

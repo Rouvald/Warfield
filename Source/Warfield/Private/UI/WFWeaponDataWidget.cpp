@@ -28,12 +28,15 @@ void UWFWeaponDataWidget::NativeOnInitialized()
     }
 }
 
-int32 UWFWeaponDataWidget::GetAmmoData() const
+FText UWFWeaponDataWidget::GetAmmoData() const
 {
     const auto WeaponComponent = GetWeaponComponent();
-    if (!WeaponComponent || !WeaponComponent->GetCurrentWeapon())return 0;
+    if (!WeaponComponent || !WeaponComponent->GetCurrentWeapon())return FText{};
 
-    return WeaponComponent->GetCurrentWeapon()->GetCurrentBulletAmount();
+    const FString CurrentWeaponAmmo = FString::FromInt(WeaponComponent->GetCurrentWeapon()->GetCurrentBulletAmount());
+    const FString WeaponComponentAmmo = FString::FromInt(WeaponComponent->GetDefaultWeaponAmmo());
+    const FText CurrentAmmoData {FText::FromString(CurrentWeaponAmmo + TEXT(" / ") + WeaponComponentAmmo)};
+    return CurrentAmmoData;
 }
 
 FText UWFWeaponDataWidget::GetWeaponName() const

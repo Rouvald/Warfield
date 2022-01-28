@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "WFCoreTypes.h"
 #include "Components/ActorComponent.h"
 #include "WFWeaponComponent.generated.h"
 
@@ -27,9 +28,13 @@ public:
     void DropWeaponButtonPressed();
     void DropWeaponButtonReleased();
 
-    void GetPickupItem( AWFBaseItem* Item);
+    void ReloadButtonPressed();
 
-    FORCEINLINE AWFBaseWeapon* GetCurrentWeapon() const {return CurrentWeapon;}
+    void GetPickupItem(AWFBaseItem* Item);
+
+    FORCEINLINE AWFBaseWeapon* GetCurrentWeapon() const { return CurrentWeapon; }
+    FORCEINLINE FWeaponData GetCurrentWeaponData() const { return CurrentWeaponData; }
+    int32 GetDefaultWeaponAmmo() const;
 
 protected:
     virtual void BeginPlay() override;
@@ -42,9 +47,15 @@ private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon", meta=(AllowPrivateAccess="true"))
     TSubclassOf<AWFBaseWeapon> DefaultWeaponClass;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon",
-        meta=(AllowPrivateAccess="true", ToolTip="Sockets: WeaponSocket_L and WeaponSocket_R"))
-    FName WeaponSocketName = "WeaponSocket_L";
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Ammo", meta = (AllowPrivateAccess = "true"))
+    TMap<EWeaponType, FWeaponData> WeaponDataMap;
+
+    FWeaponData CurrentWeaponData;
+    //
+
+    /* Ammo Map*/
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Ammo", meta=(AllowPrivateAccess="true"))
+    TMap<EAmmoType, int32> DefaultAmmoMap;
     //
 
     AWFBaseWeapon* SpawnWeapon() const;
@@ -55,5 +66,7 @@ private:
     void SwapWeapon(AWFBaseWeapon* NewWeapon);
     void DropWeapon() const;
 
-    AWFBaseCharacter* GetBaseCharacter() const;
+    void ReloadFinish();
+
+    AWFBaseCharacter* GetCharacter() const;
 };

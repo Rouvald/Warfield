@@ -18,16 +18,22 @@ class WARFIELD_API AWFBaseWeapon : public AWFBaseItem
     GENERATED_BODY()
 
 public:
+    FOnWeaponStateChangedSignature OnWeaponStateChanged;
+
     void StartFire();
     void StopFire();
 
     void ThrowWeapon();
 
     FORCEINLINE bool GetIsWeaponFalling() const { return bIsWeaponFalling; }
-    
+
     FORCEINLINE EAmmoType GetWeaponAmmoType() const { return AmmoType; }
     FORCEINLINE int32 GetCurrentBulletAmount() const { return CurrentBulletAmount; }
-    FORCEINLINE UTexture2D* GetAmmoTypeBulletTexture() const { return AmmoTypeBulletTexture;}
+    FORCEINLINE UTexture2D* GetAmmoTypeBulletTexture() const { return AmmoTypeBulletTexture; }
+    FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
+    FORCEINLINE FName GetReloadSectionName() const { return ReloadSectionName; }
+
+    void Reload(int32& CharacterBulletAmount);
 
     bool IsAmmoEmpty() const;
     bool IsAmmoFull() const;
@@ -36,22 +42,29 @@ protected:
     virtual void BeginPlay() override;
 
 private:
-    /* Weapon Shooting*/
-    /* @todo: remove into WeaponComponent, create Struct for weapon type and set AnimMon and ShootRate for different WeaponTypes */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-    UAnimMontage* FireRecoilAnimMontage;
+    /* Weapon Properties */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Properties", meta = (AllowPrivateAccess = "true"))
+    EWeaponType WeaponType{EWeaponType::EWT_Revolver};
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-    float ShootTimeRate = 0.6;
+    /* Set value relatively Fire Recoil Anim Montage */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Properties", meta = (AllowPrivateAccess = "true"))
+    float ShootTimeRate{0.6f};
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Properties", meta = (AllowPrivateAccess = "true"))
     float ShootTraceDistance = 20000.0f;
+
+    /* Anim Montages*/
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Properties", meta = (AllowPrivateAccess = "true"))
+    FName FireSectionName{TEXT("Start Fire")};
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation", meta = (AllowPrivateAccess = "true"))
+    FName ReloadSectionName{TEXT("Reload Revolver")};
+    //
 
     FTimerHandle ShootTimerHandle;
 
     bool bIsButtonFirePressed{false};
-    //bool bCanFire{true};
-    
+
     UPROPERTY()
     EWeaponState CurrentWeaponState{EWeaponState::EWS_Unoccupied};
     //
@@ -87,6 +100,7 @@ private:
     int32 DefaultBulletAmount{30};
 
     int32 CurrentBulletAmount{0};
+
     //
 
     /* Throwing */
@@ -99,19 +113,22 @@ private:
 
     void MakeShot();
 
-    void PlayFireRecoilAnimMon() const;
-
     void MakeHit(FHitResult& HitResult, const FVector& TraceStart, const FVector& TraceEnd, FVector& TraceFXEnd);
 
     void InitFX() const;
     void SpawnImpactFX(const FHitResult& HitResult, const FVector& TraceFXEnd) const;
     void SpawnTraceFX(const FVector& TraceFXStart, const FVector& TraceFXEnd) const;
 
+    void PlayFireRecoilAnimMontage();
+
     void StopFalling();
 
     void SetAmmoData() const;
     void DecreaseAmmo();
+
+    void SetWeaponState(EWeaponState NewWeaponState);
+
     // Getters
-    FVector GetMuzzleSocketLocation() const;
-    AWFBaseCharacter* GetBaseCharacter() const;
+    FTransform GetMuzzleSocketTransform() const;
+    AWFBaseCharacter* GetCharacter() const;
 };

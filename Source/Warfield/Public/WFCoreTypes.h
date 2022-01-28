@@ -11,7 +11,7 @@ class AWFBaseItem;
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnItemAreaOverlapSignature, const AWFBaseItem*, bool);
 // DECLARE_MULTICAST_DELEGATE_OneParam(FOnTraceHitItemSignature, bool);
 
-/* Weapon*/
+/* Item */
 UENUM(BlueprintType)
 enum class EItemRarity : uint8
 {
@@ -83,6 +83,38 @@ struct FItemProperties
     //
 };
 
+/* Weapon Component */
+
+USTRUCT(BlueprintType)
+struct FWeaponData
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon",
+        meta=(AllowPrivateAccess="true", ToolTip="Sockets: WeaponSocket_L and WeaponSocket_R"))
+    FName WeaponSocketName = "WeaponSocket_L";
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Ammo", meta = (AllowPrivateAccess = "true"))
+    UAnimMontage* ReloadAnimMontage;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Data", meta = (AllowPrivateAccess = "true"))
+    UAnimMontage* FireRecoilAnimMontage;
+};
+
+/* Weapon */
+
+// Weapon Type
+
+UENUM(BlueprintType)
+enum class EWeaponType : uint8
+{
+    EWT_Revolver UMETA(DisplayName="Revolver"),
+    EWT_SubmachineGun UMETA(DisplayName="SubmachineGun"),
+    EWT_AssaultRifle UMETA(DisplayName="AssaultRifle"),
+
+    EWT_MAX UMETA(DisplayName = "MAX")
+};
+
 // Weapon Data
 
 UENUM(BlueprintType)
@@ -106,3 +138,6 @@ enum class EWeaponState : uint8
 
     EWS_MAX UMETA(DisplayName = "MAX")
 };
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponStateChangedSignature, EWeaponState);
+//

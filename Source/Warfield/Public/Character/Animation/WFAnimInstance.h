@@ -15,6 +15,9 @@ class WARFIELD_API UWFAnimInstance : public UAnimInstance
 {
     GENERATED_BODY()
 public:
+
+    virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+    
     UFUNCTION(BlueprintCallable)
     void UpdateAnimationProperties(float DeltaTime);
 

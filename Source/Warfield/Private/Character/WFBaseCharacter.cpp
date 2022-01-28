@@ -92,6 +92,8 @@ void AWFBaseCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
     PlayerInputComponent->BindAction("DropWeapon", IE_Pressed, WeaponComponent, &UWFWeaponComponent::DropWeaponButtonPressed);
     PlayerInputComponent->BindAction("DropWeapon", IE_Released, WeaponComponent, &UWFWeaponComponent::DropWeaponButtonReleased);
+
+    PlayerInputComponent->BindAction("Reload", IE_Pressed, WeaponComponent, &UWFWeaponComponent::ReloadButtonPressed);
 }
 
 void AWFBaseCharacter::MoveForward(const float Value)

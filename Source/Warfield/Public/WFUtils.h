@@ -25,4 +25,18 @@ public:
     {
         return FText::FromString(FString::FromInt(Number));
     }
+
+    static void PlayAnimMontage(AWFBaseCharacter* Character, UAnimMontage* AnimMontage, const FName SectionName)
+    {
+        if (!Character) return;
+
+        const auto AnimInstance = Character->GetMesh()->GetAnimInstance();
+        if (!AnimMontage || !AnimInstance) return;
+
+        // @todo: Create WeaponType and change NameSection
+        // @todo: Create Struct for weapon Type and another specific type properties
+
+        AnimInstance->Montage_Play(AnimMontage);
+        AnimInstance->Montage_JumpToSection(SectionName);
+    }
 };

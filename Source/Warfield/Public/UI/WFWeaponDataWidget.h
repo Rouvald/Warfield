@@ -19,7 +19,7 @@ class WARFIELD_API UWFWeaponDataWidget : public UUserWidget
 	GENERATED_BODY()
 public:
     UFUNCTION(BlueprintCallable, Category="UI")
-    int32 GetAmmoData() const;
+    FText GetAmmoData() const;
 
     UFUNCTION(BlueprintCallable, Category="UI")
     FText GetWeaponName() const;
