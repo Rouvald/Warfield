@@ -35,6 +35,9 @@ public:
     FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
     FORCEINLINE FName GetReloadSectionName() const { return ReloadSectionName; }
 
+    FORCEINLINE USoundCue* GetReloadSound() const {return ReloadingSound;}
+    FORCEINLINE FName GetReloadBarrelName() const { return WeaponReloadFXSocketName; }
+
     /*FORCEINLINE const FWeaponChamberBones& GetWeaponChamberBones() const { return WeaponChamberBones; }
     FORCEINLINE void SetIsChamberRotation(bool IsRotation) { bIsChamberRotating = IsRotation; }
     FORCEINLINE bool GetIsChamberRotation() const {return bIsChamberRotating;}*/
@@ -94,6 +97,13 @@ private:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon VFX", meta = (AllowPrivateAccess = "true"))
     UParticleSystem* TraceFX;
+
+    /* Reload */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon VFX", meta = (AllowPrivateAccess = "true"))
+    USoundCue* ReloadingSound;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Weapon VFX", meta = (AllowPrivateAccess = "true"))
+    FName WeaponReloadFXSocketName = "FX_Gun_Barrel";
     //
 
     /* Ammo */

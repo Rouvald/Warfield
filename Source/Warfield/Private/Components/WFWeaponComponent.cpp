@@ -3,11 +3,12 @@
 #include "Components/WFWeaponComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
-#include "Components/PoseableMeshComponent.h"
+#include "Sound/SoundCue.h"
 
 #include "WFBaseCharacter.h"
 #include "WFBaseWeapon.h"
 #include "WFUtils.h"
+#include "Components/AudioComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFWeaponComponent, All, All)
 
@@ -45,6 +46,11 @@ void UWFWeaponComponent::TakeWeaponButtonPressed()
     if (Weapon)
     {
         Weapon->StartItemInterping(Character);
+    }
+
+    if(Character->GetHitItem()->GetPickupSound())
+    {
+        UGameplayStatics::SpawnSoundAtLocation(GetWorld(), Character->GetHitItem()->GetPickupSound(), Character->GetHitItem()->GetActorLocation());
     }
 }
 
@@ -108,20 +114,28 @@ void UWFWeaponComponent::ReloadFinish()
     CurrentWeapon->OnWeaponStateChanged.Broadcast(EWeaponState::EWS_Unoccupied);
 }
 
-/*void UWFWeaponComponent::StartRotateChamber()
+void UWFWeaponComponent::StartRotateChamber()
 {
-    if (!CurrentWeapon) return;
+    if (!CurrentWeapon || !CurrentWeapon->GetReloadSound()) return;
 
-    const int32 BoneIndex{CurrentWeapon->GetItemMesh()->GetBoneIndex(CurrentWeapon->GetWeaponChamberBones().WeaponChamberBoneName)};
-    BarrelBoneTransform = CurrentWeapon->GetItemMesh()->GetBoneTransform(BoneIndex);
-
-    CurrentWeapon->SetIsChamberRotation(true);
+    if (!ReloadAudioComponent)
+    {
+        ReloadAudioComponent = UGameplayStatics::SpawnSoundAttached(CurrentWeapon->GetReloadSound(), CurrentWeapon->GetItemMesh(),
+            CurrentWeapon->GetReloadBarrelName());
+    }
+    else
+    {
+        ReloadAudioComponent->SetPaused(false);
+    }
 }
 
 void UWFWeaponComponent::StopRotateChamber()
 {
-    CurrentWeapon->SetIsChamberRotation(false);
-}*/
+    if(ReloadAudioComponent)
+    {
+        ReloadAudioComponent->SetPaused(true);
+    }
+}
 
 int32 UWFWeaponComponent::GetDefaultWeaponAmmo() const
 {

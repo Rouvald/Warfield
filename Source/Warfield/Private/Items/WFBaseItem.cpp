@@ -1,14 +1,16 @@
 // Warfield Game. All Rights Reserved
 
 #include "Items/WFBaseItem.h"
-
-#include "WFBaseCharacter.h"
-#include "WFWeaponComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
+
+#include "WFBaseCharacter.h"
+#include "WFWeaponComponent.h"
 #include "UI/WFItemInfoWidget.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogWFBaseItem, All, All)
@@ -287,4 +289,9 @@ void AWFBaseItem::FinishItemInterping()
     WeaponComponent->GetPickupItem(this);
     // Return default scale
     SetActorScale3D(FVector{1.0f});
+
+    if(EquipSound)
+    {
+        UGameplayStatics::SpawnSoundAtLocation(GetWorld(), EquipSound, GetActorLocation());
+    }
 }

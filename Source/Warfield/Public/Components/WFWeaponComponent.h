@@ -40,7 +40,6 @@ protected:
     virtual void BeginPlay() override;
 
 private:
-    
     // Weapon
     UPROPERTY()
     AWFBaseWeapon* CurrentWeapon;
@@ -52,6 +51,9 @@ private:
     TMap<EWeaponType, FWeaponData> WeaponDataMap;
 
     FWeaponData CurrentWeaponData;
+
+    UPROPERTY()
+    UAudioComponent* ReloadAudioComponent;
     //
 
     /* Ammo Map*/
@@ -82,11 +84,11 @@ private:
     UFUNCTION(BlueprintCallable)
     void ReloadFinish();
 
-    /*UFUNCTION(BlueprintCallable)
+    UFUNCTION(BlueprintCallable)
     void StartRotateChamber();
 
     UFUNCTION(BlueprintCallable)
-    void StopRotateChamber();*/
+    void StopRotateChamber();
 
     AWFBaseCharacter* GetCharacter() const;
 };

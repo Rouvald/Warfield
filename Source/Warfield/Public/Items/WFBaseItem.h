@@ -13,6 +13,7 @@ class USphereComponent;
 class UWidgetComponent;
 class UWFItemInfoWidget;
 class UCurveFloat;
+class USoundCue;
 
 UCLASS()
 class WARFIELD_API AWFBaseItem : public AActor
@@ -30,6 +31,9 @@ public:
 
     FORCEINLINE FName GetItemName() const { return ItemName; }
     FORCEINLINE USkeletalMeshComponent* GetItemMesh() const { return ItemMesh; }
+
+    FORCEINLINE USoundCue* GetPickupSound() const { return PickupSound;}
+    FORCEINLINE USoundCue* GetEquipSound() const { return EquipSound;}
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -66,7 +70,15 @@ protected:
 
     FTimerHandle ItemInterpingTimerHandle;
     bool bIsItemInterping{false};
+//
+    /* Item Sounds */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Sound", meta = (AllowPrivateAccess = "true"))
+    USoundCue* PickupSound;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Sound", meta = (AllowPrivateAccess = "true"))
+    USoundCue* EquipSound;
+    
+    //
     UPROPERTY()
     AWFBaseCharacter* BaseCharacter{nullptr};
 
