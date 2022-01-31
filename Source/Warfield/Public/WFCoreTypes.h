@@ -141,3 +141,21 @@ enum class EWeaponState : uint8
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponStateChangedSignature, EWeaponState);
 //
+
+// Weapon Reload rotate chamber
+
+/*USTRUCT(BlueprintType)
+struct FWeaponChamberBones
+{
+    GENERATED_USTRUCT_BODY()
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Skeleton", meta = (AllowPrivateAccess = "true"))
+    TArray<FName> WeaponBladeWingBoneNames;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Skeleton", meta = (AllowPrivateAccess = "true"))
+    FName WeaponBarrelBoneName{TEXT("gun_real_barrel")};
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Skeleton", meta = (AllowPrivateAccess = "true"))
+    FName WeaponChamberBoneName{TEXT("gun_chamber")};
+};*/
+//

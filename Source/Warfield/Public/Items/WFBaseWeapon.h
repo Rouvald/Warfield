@@ -22,6 +22,7 @@ public:
 
     void StartFire();
     void StopFire();
+    bool CanFire() const;
 
     void ThrowWeapon();
 
@@ -29,11 +30,17 @@ public:
 
     FORCEINLINE EAmmoType GetWeaponAmmoType() const { return AmmoType; }
     FORCEINLINE int32 GetCurrentBulletAmount() const { return CurrentBulletAmount; }
+    FORCEINLINE int32 GetMaximumBulletInMagazine() const { return MaximumBulletInMagazine; }
     FORCEINLINE UTexture2D* GetAmmoTypeBulletTexture() const { return AmmoTypeBulletTexture; }
     FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
     FORCEINLINE FName GetReloadSectionName() const { return ReloadSectionName; }
 
-    void Reload(int32& CharacterBulletAmount);
+    /*FORCEINLINE const FWeaponChamberBones& GetWeaponChamberBones() const { return WeaponChamberBones; }
+    FORCEINLINE void SetIsChamberRotation(bool IsRotation) { bIsChamberRotating = IsRotation; }
+    FORCEINLINE bool GetIsChamberRotation() const {return bIsChamberRotating;}*/
+
+    void Reload(int32 ReloadingAmmo);
+    bool CanReload() const;
 
     bool IsAmmoEmpty() const;
     bool IsAmmoFull() const;
@@ -55,10 +62,10 @@ private:
 
     /* Anim Montages*/
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Properties", meta = (AllowPrivateAccess = "true"))
-    FName FireSectionName{TEXT("Start Fire")};
-    
+    FName FireSectionName{TEXT("StartFire")};
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Animation", meta = (AllowPrivateAccess = "true"))
-    FName ReloadSectionName{TEXT("Reload Revolver")};
+    FName ReloadSectionName{TEXT("ReloadRevolver")};
     //
 
     FTimerHandle ShootTimerHandle;
@@ -70,7 +77,7 @@ private:
     //
 
     /* Weapon VFX*/
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon VFX", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Weapon VFX", meta = (AllowPrivateAccess = "true"))
     FName WeaponMuzzleFXSocketName = "MuzzleSocket";
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon VFX", meta = (AllowPrivateAccess = "true"))
@@ -96,8 +103,9 @@ private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Ammo", meta = (AllowPrivateAccess = "true"))
     UTexture2D* AmmoTypeBulletTexture;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Ammo", meta = (AllowPrivateAccess = "true"))
-    int32 DefaultBulletAmount{30};
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon Ammo",
+        meta = (AllowPrivateAccess = "true", ClampMin="1", ClampMax="100"))
+    int32 MaximumBulletInMagazine{30};
 
     int32 CurrentBulletAmount{0};
 
@@ -107,6 +115,15 @@ private:
     FTimerHandle ThrowingTimerHandle;
     float WeaponFallingTime{0.6f};
     bool bIsWeaponFalling{false};
+    //
+
+    /* Reloading rotate chamber */
+    /*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Skeleton", meta = (AllowPrivateAccess = "true"))
+    FWeaponChamberBones WeaponChamberBones;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Skeleton", meta = (AllowPrivateAccess = "true"))
+    bool bIsChamberRotating{false};*/
+    //
 
     void StartFireTimer();
     void ResetFireTimer();
@@ -123,11 +140,12 @@ private:
 
     void StopFalling();
 
+    void AutoReload() const;
+
     void SetAmmoData() const;
     void DecreaseAmmo();
 
     void SetWeaponState(EWeaponState NewWeaponState);
-
     // Getters
     FTransform GetMuzzleSocketTransform() const;
     AWFBaseCharacter* GetCharacter() const;

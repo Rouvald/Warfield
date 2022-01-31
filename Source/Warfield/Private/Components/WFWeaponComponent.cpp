@@ -3,6 +3,7 @@
 #include "Components/WFWeaponComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Components/PoseableMeshComponent.h"
 
 #include "WFBaseCharacter.h"
 #include "WFBaseWeapon.h"
@@ -62,24 +63,69 @@ void UWFWeaponComponent::DropWeaponButtonReleased()
 
 void UWFWeaponComponent::ReloadButtonPressed()
 {
-    if (!CurrentWeapon) return;
+    if (!CurrentWeapon || !CurrentWeapon->CanReload()) return;
     if (GetDefaultWeaponAmmo() <= 0) return;
 
-    CurrentWeapon->Reload(DefaultAmmoMap[CurrentWeapon->GetWeaponAmmoType()]);
+    CurrentWeapon->StopFire();
+    CurrentWeapon->OnWeaponStateChanged.Broadcast(EWeaponState::EWS_Reloading);
 
     const auto Character = GetCharacter();
     WFUtils::PlayAnimMontage(Character, CurrentWeaponData.ReloadAnimMontage, CurrentWeapon->GetReloadSectionName());
 }
 
+int32 UWFWeaponComponent::TakeAmmoForReload()
+{
+    if (!CurrentWeapon || CurrentWeapon->IsAmmoFull()) return 0;
+
+    const auto CurrentWeaponAmmoType = CurrentWeapon->GetWeaponAmmoType();
+    if (DefaultAmmoMap.Contains(CurrentWeaponAmmoType))
+    {
+        int32 NeededAmmo = CurrentWeapon->GetMaximumBulletInMagazine() - CurrentWeapon->GetCurrentBulletAmount();
+        if (NeededAmmo <= CurrentWeapon->GetMaximumBulletInMagazine() && NeededAmmo > 0)
+        {
+            if (NeededAmmo > DefaultAmmoMap[CurrentWeaponAmmoType])
+            {
+                NeededAmmo = DefaultAmmoMap[CurrentWeaponAmmoType];
+                DefaultAmmoMap[CurrentWeaponAmmoType] = 0;
+                return NeededAmmo;
+            }
+            DefaultAmmoMap[CurrentWeaponAmmoType] -= NeededAmmo;
+            return NeededAmmo;
+        }
+    }
+    return 0;
+}
+
 void UWFWeaponComponent::ReloadFinish()
 {
     if (!CurrentWeapon) return;
+
+    const int32 NeededAmmo{TakeAmmoForReload()};
+    if (NeededAmmo == 0) return;
+
+    CurrentWeapon->Reload(NeededAmmo);
+
     CurrentWeapon->OnWeaponStateChanged.Broadcast(EWeaponState::EWS_Unoccupied);
 }
 
+/*void UWFWeaponComponent::StartRotateChamber()
+{
+    if (!CurrentWeapon) return;
+
+    const int32 BoneIndex{CurrentWeapon->GetItemMesh()->GetBoneIndex(CurrentWeapon->GetWeaponChamberBones().WeaponChamberBoneName)};
+    BarrelBoneTransform = CurrentWeapon->GetItemMesh()->GetBoneTransform(BoneIndex);
+
+    CurrentWeapon->SetIsChamberRotation(true);
+}
+
+void UWFWeaponComponent::StopRotateChamber()
+{
+    CurrentWeapon->SetIsChamberRotation(false);
+}*/
+
 int32 UWFWeaponComponent::GetDefaultWeaponAmmo() const
 {
-    if (!CurrentWeapon) return false;
+    if (!CurrentWeapon) return 0;
 
     if (!DefaultAmmoMap.Contains(CurrentWeapon->GetWeaponAmmoType())) return 0;
 

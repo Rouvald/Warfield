@@ -13,6 +13,7 @@ void UWFAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     Super::NativeUpdateAnimation(DeltaSeconds);
 
     UpdateAnimationProperties(DeltaSeconds);
+    
 }
 
 void UWFAnimInstance::UpdateAnimationProperties(float DeltaTime)

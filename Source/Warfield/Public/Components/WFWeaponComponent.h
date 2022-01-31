@@ -40,6 +40,7 @@ protected:
     virtual void BeginPlay() override;
 
 private:
+    
     // Weapon
     UPROPERTY()
     AWFBaseWeapon* CurrentWeapon;
@@ -58,6 +59,16 @@ private:
     TMap<EAmmoType, int32> DefaultAmmoMap;
     //
 
+    /* Reload changing weapon mesh*/
+    /*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Reloading Mesh Transform", meta=(AllowPrivateAccess="true") )
+    FTransform BarrelBoneTransform;
+    
+    float BladeWingBoneLocationX = 5.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Reloading Mesh Transform", meta=(AllowPrivateAccess="true") )
+    float ChamberRotationPitchSpeed = 15.0f;*/
+    //
+
     AWFBaseWeapon* SpawnWeapon() const;
     void AttachWeaponToComponent(AWFBaseWeapon* Weapon, USceneComponent* SceneComponent, const FName& SocketName);
 
@@ -66,7 +77,16 @@ private:
     void SwapWeapon(AWFBaseWeapon* NewWeapon);
     void DropWeapon() const;
 
+    int32 TakeAmmoForReload();
+
+    UFUNCTION(BlueprintCallable)
     void ReloadFinish();
+
+    /*UFUNCTION(BlueprintCallable)
+    void StartRotateChamber();
+
+    UFUNCTION(BlueprintCallable)
+    void StopRotateChamber();*/
 
     AWFBaseCharacter* GetCharacter() const;
 };

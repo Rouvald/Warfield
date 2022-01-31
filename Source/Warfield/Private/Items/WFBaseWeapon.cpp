@@ -16,8 +16,8 @@ void AWFBaseWeapon::BeginPlay()
 {
     Super::BeginPlay();
 
-    checkf(DefaultBulletAmount > 0, TEXT("Bullet amount can be <= 0"));
-    CurrentBulletAmount = DefaultBulletAmount;
+    checkf(MaximumBulletInMagazine > 0, TEXT("Maximum Bullet in Magazine can't be <= 0"));
+    CurrentBulletAmount = MaximumBulletInMagazine;
 
     OnWeaponStateChanged.AddUObject(this, &AWFBaseWeapon::SetWeaponState);
 }
@@ -37,13 +37,19 @@ void AWFBaseWeapon::StartFireTimer()
 
 void AWFBaseWeapon::ResetFireTimer()
 {
+    if(CurrentWeaponState == EWeaponState::EWS_Reloading) return;
+    
     SetWeaponState(EWeaponState::EWS_Unoccupied);
-    if (!IsAmmoEmpty())
+    if (bIsButtonFirePressed)
     {
-        if (bIsButtonFirePressed)
+        if (!IsAmmoEmpty())
         {
             MakeShot();
         }
+    }
+    if (IsAmmoEmpty())
+    {
+        AutoReload();
     }
 }
 
@@ -52,23 +58,20 @@ void AWFBaseWeapon::StopFire()
     bIsButtonFirePressed = false;
 }
 
+bool AWFBaseWeapon::CanFire() const
+{
+    return CurrentWeaponState == EWeaponState::EWS_Unoccupied && !IsAmmoEmpty();
+}
+
 void AWFBaseWeapon::MakeShot()
 {
-    if (!GetWorld() || CurrentWeaponState != EWeaponState::EWS_Unoccupied || IsAmmoEmpty())
-    {
-        StopFire();
-        return;
-    }
+    if (!GetWorld() || !CanFire()) return;
 
     const auto Character = GetCharacter();
     if (!Character) return;
 
     FVector TraceStart, TraceEnd;
-    if (!WFUtils::GetTraceData(Character, TraceStart, TraceEnd, ShootTraceDistance))
-    {
-        StopFire();
-        return;
-    }
+    if (!WFUtils::GetTraceData(Character, TraceStart, TraceEnd, ShootTraceDistance)) return;
 
     InitFX();
 
@@ -140,18 +143,6 @@ void AWFBaseWeapon::MakeHit(FHitResult& HitResult, const FVector& TraceStart, co
 void AWFBaseWeapon::InitFX() const
 {
     // Muzzle FX
-    /*const auto Character = GetCharacter();
-    if (!Character) return;*/
-
-    /* @todo: In future remade with SpawnAtLocation */
-    /*UGameplayStatics::SpawnEmitterAttached(MuzzleFX, //
-        Character->GetMesh(),                        //
-        WeaponMuzzleFXSocketName,                    //
-        FVector::ZeroVector,                         //
-        FRotator::ZeroRotator,                       //
-        EAttachLocation::SnapToTarget,               //
-        true                                         //
-        );*/
     UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFX, GetMuzzleSocketTransform());
 
     // Sound
@@ -217,19 +208,38 @@ void AWFBaseWeapon::StopFalling()
     OnItemStateChanged.Broadcast(EItemState::EIS_Pickup);
 }
 
-void AWFBaseWeapon::Reload(int32& CharacterBulletAmount)
+void AWFBaseWeapon::Reload(int32 ReloadingAmmo)
 {
-    // @todo: create public CanReload for WeaponComponent
-    if (CurrentWeaponState != EWeaponState::EWS_Unoccupied) return;
+    if (CurrentBulletAmount + ReloadingAmmo > MaximumBulletInMagazine)
+    {
+        UE_LOG(LogWFBaseWeapon, Error, TEXT("Bullet for reloading more maximum bullet in magazine"));
+        return;
+    }
+    CurrentBulletAmount += ReloadingAmmo;
+}
 
-    SetWeaponState(EWeaponState::EWS_Reloading);
+/* @todo: rework auto reload (maybe)*/
+void AWFBaseWeapon::AutoReload() const
+{
+    const auto Character = GetCharacter();
+    if (!Character) return;
+
+    const auto WeaponComponent = Character->FindComponentByClass<UWFWeaponComponent>();
+    if (!WeaponComponent) return;
+
+    WeaponComponent->ReloadButtonPressed();
+}
+
+bool AWFBaseWeapon::CanReload() const
+{
+    return !IsAmmoFull() && CurrentWeaponState != EWeaponState::EWS_Reloading;
 }
 
 void AWFBaseWeapon::SetWeaponState(EWeaponState NewWeaponState)
 {
     if (CurrentWeaponState == NewWeaponState) return;
     CurrentWeaponState = NewWeaponState;
-    //UE_LOG(LogWFBaseWeapon,Display, TEXT("%s"), *UEnum::GetValueAsString(NewWeaponState));
+    //UE_LOG(LogWFBaseWeapon, Display, TEXT("%s"), *UEnum::GetValueAsString(NewWeaponState));
 }
 
 void AWFBaseWeapon::SetAmmoData() const
@@ -243,7 +253,7 @@ bool AWFBaseWeapon::IsAmmoEmpty() const
 
 bool AWFBaseWeapon::IsAmmoFull() const
 {
-    return CurrentBulletAmount == DefaultBulletAmount;
+    return CurrentBulletAmount == MaximumBulletInMagazine;
 }
 
 void AWFBaseWeapon::DecreaseAmmo()

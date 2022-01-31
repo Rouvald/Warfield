@@ -28,7 +28,8 @@ public:
 
     void StartItemInterping(AWFBaseCharacter* Character);
 
-    FORCEINLINE FName GetItemName() const {return ItemName;}
+    FORCEINLINE FName GetItemName() const { return ItemName; }
+    FORCEINLINE USkeletalMeshComponent* GetItemMesh() const { return ItemMesh; }
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -45,7 +46,7 @@ protected:
 
 
     /* Item Properties*/
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
     FName ItemName{"BaseItem"};
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
@@ -79,7 +80,7 @@ protected:
     UPROPERTY()
     TMap<EItemState, FItemProperties> ItemPropertiesMap;
     //
-    
+
     //
     virtual void BeginPlay() override;
     //
@@ -105,6 +106,6 @@ protected:
     void ItemInterpZ(FVector& ItemLocation);
     void ItemInterpRotationYaw();
     void ItemInterpScale();
-    
+
     void FinishItemInterping();
 };
