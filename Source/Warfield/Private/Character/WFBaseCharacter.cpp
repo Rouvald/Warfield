@@ -25,9 +25,9 @@ AWFBaseCharacter::AWFBaseCharacter()
 
     CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
     CameraBoom->SetupAttachment(GetRootComponent());
-    CameraBoom->TargetArmLength = 500.0f;
+    CameraBoom->TargetArmLength = 350.0f;
     CameraBoom->bUsePawnControlRotation = true;
-    CameraBoom->SocketOffset = FVector{0.0f, 110.0f, 140.0f};
+    CameraBoom->SocketOffset = FVector{0.0f, 90.0f, 100.0f};
 
     FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
     FollowCamera->SetupAttachment(CameraBoom, CameraBoom->SocketName);

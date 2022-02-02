@@ -1,6 +1,9 @@
 // Warfield Game. All Rigths Reserved
 
 #include "Components/WFCrossHairComponent.h"
+
+#include "WFBaseWeapon.h"
+#include "WFWeaponComponent.h"
 #include "Character/WFBaseCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -30,8 +33,23 @@ void UWFCrossHairComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+    UpdateIsAiming();
     UpdateZoomInterp(DeltaTime);
     UpdateCrossHairSpread(DeltaTime);
+}
+
+void UWFCrossHairComponent::UpdateIsAiming()
+{
+    const auto Character = GetCharacter();
+    if (!Character || !Character->GetCharacterMovement()) return;
+
+    const auto WeaponComponent = Character->FindComponentByClass<UWFWeaponComponent>();
+    if(!WeaponComponent || !WeaponComponent->GetCurrentWeapon()) return;
+
+    if(Character->GetCharacterMovement()->IsFalling()/* || WeaponComponent->GetCurrentWeapon()->GetCurrentWeaponState() == EWeaponState::EWS_Reloading*/)
+    {
+        bIsAiming = false;
+    }
 }
 
 void UWFCrossHairComponent::Zoom(const bool bEnable)

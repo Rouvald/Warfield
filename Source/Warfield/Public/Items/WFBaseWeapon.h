@@ -27,6 +27,7 @@ public:
     void ThrowWeapon();
 
     FORCEINLINE bool GetIsWeaponFalling() const { return bIsWeaponFalling; }
+    FORCEINLINE bool GetIsButtonFirePressed() const { return bIsButtonFirePressed; }
 
     FORCEINLINE EAmmoType GetWeaponAmmoType() const { return AmmoType; }
     FORCEINLINE int32 GetCurrentBulletAmount() const { return CurrentBulletAmount; }
@@ -34,6 +35,8 @@ public:
     FORCEINLINE UTexture2D* GetAmmoTypeBulletTexture() const { return AmmoTypeBulletTexture; }
     FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
     FORCEINLINE FName GetReloadSectionName() const { return ReloadSectionName; }
+    
+    FORCEINLINE EWeaponState GetCurrentWeaponState() const { return CurrentWeaponState; }
 
     FORCEINLINE USoundCue* GetReloadSound() const {return ReloadingSound;}
     FORCEINLINE FName GetReloadBarrelName() const { return WeaponReloadFXSocketName; }
@@ -72,6 +75,7 @@ private:
     //
 
     FTimerHandle ShootTimerHandle;
+    FTimerHandle StartShootDelayTimerHandle;
 
     bool bIsButtonFirePressed{false};
 
@@ -127,7 +131,7 @@ private:
     bool bIsWeaponFalling{false};
     //
 
-    /* Reloading rotate chamber */
+    /* Reloading */
     /*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Weapon Skeleton", meta = (AllowPrivateAccess = "true"))
     FWeaponChamberBones WeaponChamberBones;
 

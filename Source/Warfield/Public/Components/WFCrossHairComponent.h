@@ -105,5 +105,7 @@ private:
     UFUNCTION()
     void StopCrossHairShoot();
 
+    void UpdateIsAiming();
+
     AWFBaseCharacter* GetCharacter() const;
 };

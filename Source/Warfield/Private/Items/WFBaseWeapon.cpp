@@ -25,7 +25,8 @@ void AWFBaseWeapon::BeginPlay()
 void AWFBaseWeapon::StartFire()
 {
     bIsButtonFirePressed = true;
-    MakeShot();
+    /* Wait still Aim animation is blending */
+    GetWorldTimerManager().SetTimer(StartShootDelayTimerHandle, this, &AWFBaseWeapon::MakeShot, 0.1f);
 }
 
 void AWFBaseWeapon::StartFireTimer()

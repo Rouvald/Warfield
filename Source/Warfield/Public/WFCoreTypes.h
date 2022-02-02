@@ -159,3 +159,19 @@ struct FWeaponChamberBones
     FName WeaponChamberBoneName{TEXT("gun_chamber")};
 };*/
 //
+
+
+/* Anim instance */
+
+// Aim offset States
+
+UENUM(BlueprintType)
+enum class EOffsetState : uint8
+{
+    EOS_Hip UMETA(DisplayName="Hip"),
+    EOS_Aiming UMETA(DisplayName="Aiming"),
+    EOS_InAir UMETA(DisplayName="inAir"),
+    EOS_Reloading UMETA(DisplayName="Reloading"),
+
+    EOS_MAX UMETA(DisplayName = "MAX")
+};
