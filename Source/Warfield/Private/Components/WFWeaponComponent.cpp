@@ -60,7 +60,7 @@ void UWFWeaponComponent::TakeWeaponButtonReleased()
 
 void UWFWeaponComponent::DropWeaponButtonPressed()
 {
-    //DropWeapon();
+    //DropItem();
 }
 
 void UWFWeaponComponent::DropWeaponButtonReleased()
@@ -187,12 +187,12 @@ void UWFWeaponComponent::SwapWeapon(AWFBaseWeapon* NewWeapon)
     const auto Character = GetCharacter();
     if (!Character) return;
 
-    DropWeapon();
+    DropItem();
     EquipWeapon(NewWeapon);
     Character->ClearHitItem();
 }
 
-void UWFWeaponComponent::DropWeapon() const
+void UWFWeaponComponent::DropItem() const
 {
     if (!CurrentWeapon) return;
 

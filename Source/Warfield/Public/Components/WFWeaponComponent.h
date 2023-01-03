@@ -77,7 +77,7 @@ private:
     void EquipWeapon(AWFBaseWeapon* EquippedWeapon);
 
     void SwapWeapon(AWFBaseWeapon* NewWeapon);
-    void DropWeapon() const;
+    void DropItem() const;
 
     int32 TakeAmmoForReload();
 
